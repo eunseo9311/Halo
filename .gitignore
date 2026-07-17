@@ -1,0 +1,75 @@
+# ============================================================
+# ROOT
+# ============================================================
+.DS_Store
+*.log
+*.tmp
+
+# ============================================================
+# Flutter (app/)
+# ============================================================
+app/.dart_tool/
+app/.flutter-plugins
+app/.flutter-plugins-dependencies
+app/.packages
+app/build/
+app/android/.gradle/
+app/android/local.properties
+app/android/key.properties
+app/ios/.symlinks/
+app/ios/Pods/
+app/ios/Flutter/Flutter.framework
+app/ios/Flutter/Flutter.podspec
+app/macos/Pods/
+app/coverage/
+app/.env
+app/*.env
+
+# ============================================================
+# Spring Boot (server/)
+# ============================================================
+server/.gradle/
+server/build/
+server/out/
+server/*.class
+server/!**/src/
+server/application-local.yml
+server/application-dev.yml
+server/application-prod.yml
+server/.env
+server/*.env
+# Keep examples
+!server/**/*.example
+
+# ============================================================
+# Python (data/)
+# ============================================================
+data/__pycache__/
+data/**/__pycache__/
+data/*.py[cod]
+data/**/*.py[cod]
+data/.venv/
+data/.uv/
+data/*.egg-info/
+data/.mypy_cache/
+data/.ruff_cache/
+data/.pytest_cache/
+data/htmlcov/
+data/.coverage
+data/.env
+data/*.env
+!data/**/*.example
+
+# ============================================================
+# Docker
+# ============================================================
+docker-compose.override.yml
+
+# ============================================================
+# IDE
+# ============================================================
+.idea/
+*.iml
+.vscode/
+*.swp
+*.swo

@@ -1,0 +1,58 @@
+version: "3.9"
+
+services:
+  # ── PostgreSQL + PostGIS ─────────────────────────────────────────────────
+  db:
+    image: postgis/postgis:16-3.4
+    container_name: halo-db
+    environment:
+      POSTGRES_DB: halo
+      POSTGRES_USER: halo
+      POSTGRES_PASSWORD: halo_secret
+    ports:
+      - "5432:5432"
+    volumes:
+      - halo_pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U halo -d halo"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  # ── Spring Boot API ──────────────────────────────────────────────────────
+  # Tip: during active development, run Spring from your IDE instead.
+  # Comment this service out and run: cd server && ./gradlew bootRun
+  server:
+    build:
+      context: ./server
+      dockerfile: Dockerfile
+    container_name: halo-server
+    ports:
+      - "8080:8080"
+    environment:
+      SPRING_PROFILES_ACTIVE: local
+      SPRING_DATASOURCE_URL: jdbc:postgresql://db:5432/halo
+      SPRING_DATASOURCE_USERNAME: halo
+      SPRING_DATASOURCE_PASSWORD: halo_secret
+    depends_on:
+      db:
+        condition: service_healthy
+
+  # ── Python data pipeline ─────────────────────────────────────────────────
+  # Not a persistent service — run ad-hoc for batch scoring:
+  #   docker-compose run --rm data uv run python scripts/score_segments.py
+  data:
+    build:
+      context: ./data
+      dockerfile: Dockerfile
+    container_name: halo-data
+    environment:
+      DATABASE_URL: postgresql://halo:halo_secret@db:5432/halo
+    depends_on:
+      db:
+        condition: service_healthy
+    profiles:
+      - batch   # only starts with: docker-compose --profile batch run data ...
+
+volumes:
+  halo_pgdata:
