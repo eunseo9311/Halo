@@ -38,21 +38,6 @@ services:
       db:
         condition: service_healthy
 
-  # ── Python data pipeline ─────────────────────────────────────────────────
-  # Not a persistent service — run ad-hoc for batch scoring:
-  #   docker-compose run --rm data uv run python scripts/score_segments.py
-  data:
-    build:
-      context: ./data
-      dockerfile: Dockerfile
-    container_name: halo-data
-    environment:
-      DATABASE_URL: postgresql://halo:halo_secret@db:5432/halo
-    depends_on:
-      db:
-        condition: service_healthy
-    profiles:
-      - batch   # only starts with: docker-compose --profile batch run data ...
 
 volumes:
   halo_pgdata:
