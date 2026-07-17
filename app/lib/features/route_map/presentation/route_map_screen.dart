@@ -1,32 +1,65 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_map/flutter_map.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:geolocator/geolocator.dart';
 import 'package:halo/features/route_map/data/segment_repository.dart';
 import 'package:latlong2/latlong.dart';
 
-// ── Providers ──────────────────────────────────────────────────────────────
+// ── Constants ───────────────────────────────────────────────────────────────
+
+/// Downtown LA fallback when location is unavailable.
+const _defaultCenter = LatLng(34.0522, -118.2437);
+
+// ── Providers ────────────────────────────────────────────────────────────────
+
+final _locationProvider = FutureProvider<LatLng>((ref) async {
+  try {
+    bool serviceEnabled = await Geolocator.isLocationServiceEnabled();
+    if (!serviceEnabled) return _defaultCenter;
+
+    LocationPermission permission = await Geolocator.checkPermission();
+    if (permission == LocationPermission.denied) {
+      permission = await Geolocator.requestPermission();
+    }
+    if (permission == LocationPermission.denied ||
+        permission == LocationPermission.deniedForever) {
+      return _defaultCenter;
+    }
+
+    final pos = await Geolocator.getCurrentPosition(
+      locationSettings: const LocationSettings(
+        accuracy: LocationAccuracy.high,
+        timeLimit: Duration(seconds: 10),
+      ),
+    );
+    return LatLng(pos.latitude, pos.longitude);
+  } catch (_) {
+    return _defaultCenter;
+  }
+});
 
 final _repositoryProvider = Provider<SegmentRepository>(
   (ref) => SegmentRepository(),
 );
 
-/// Downtown LA coordinates (default center)
-const _defaultCenter = LatLng(34.0522, -118.2437);
-
 final segmentScoresProvider = FutureProvider.autoDispose<List<SegmentScore>>(
-  (ref) => ref.watch(_repositoryProvider).fetchNearby(
-        lat: _defaultCenter.latitude,
-        lng: _defaultCenter.longitude,
-      ),
+  (ref) async {
+    final location = await ref.watch(_locationProvider.future);
+    return ref.watch(_repositoryProvider).fetchNearby(
+          lat: location.latitude,
+          lng: location.longitude,
+        );
+  },
 );
 
-// ── Screen ─────────────────────────────────────────────────────────────────
+// ── Screen ───────────────────────────────────────────────────────────────────
 
 class RouteMapScreen extends ConsumerWidget {
   const RouteMapScreen({super.key});
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final locationAsync = ref.watch(_locationProvider);
     final scoresAsync = ref.watch(segmentScoresProvider);
 
     return Scaffold(
@@ -34,15 +67,22 @@ class RouteMapScreen extends ConsumerWidget {
         title: const Text('Halo'),
         actions: [
           IconButton(
-            icon: const Icon(Icons.refresh),
-            onPressed: () => ref.invalidate(segmentScoresProvider),
+            icon: const Icon(Icons.my_location),
+            tooltip: 'Re-center',
+            onPressed: () {
+              ref.invalidate(_locationProvider);
+              ref.invalidate(segmentScoresProvider);
+            },
           ),
         ],
       ),
       body: Stack(
         children: [
-          _HaloMap(scoresAsync: scoresAsync),
-          if (scoresAsync.isLoading)
+          _HaloMap(
+            locationAsync: locationAsync,
+            scoresAsync: scoresAsync,
+          ),
+          if (locationAsync.isLoading || scoresAsync.isLoading)
             const Center(child: CircularProgressIndicator()),
           if (scoresAsync.hasError)
             _ErrorBanner(message: scoresAsync.error.toString()),
@@ -52,33 +92,53 @@ class RouteMapScreen extends ConsumerWidget {
   }
 }
 
-// ── Map widget ─────────────────────────────────────────────────────────────
+// ── Map widget ────────────────────────────────────────────────────────────────
 
 class _HaloMap extends StatelessWidget {
-  const _HaloMap({required this.scoresAsync});
+  const _HaloMap({required this.locationAsync, required this.scoresAsync});
 
+  final AsyncValue<LatLng> locationAsync;
   final AsyncValue<List<SegmentScore>> scoresAsync;
 
   @override
   Widget build(BuildContext context) {
-    final segments = scoresAsync.valueOrNull ?? _dummySegments();
+    final center = locationAsync.valueOrNull ?? _defaultCenter;
+    final segments = scoresAsync.valueOrNull ?? [];
 
     return FlutterMap(
-      options: const MapOptions(
-        initialCenter: _defaultCenter,
+      options: MapOptions(
+        initialCenter: center,
         initialZoom: 15,
       ),
       children: [
-        // OSM tile layer — no API key required
         TileLayer(
           urlTemplate: 'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
           userAgentPackageName: 'com.safesoundla.halo',
         ),
-        // WSI color-coded segment overlays
         PolylineLayer(
           polylines: segments.map(_buildPolyline).toList(),
         ),
-        // Attribution (required by OSM usage policy)
+        // User location marker
+        if (locationAsync.valueOrNull != null)
+          MarkerLayer(
+            markers: [
+              Marker(
+                point: center,
+                width: 20,
+                height: 20,
+                child: Container(
+                  decoration: BoxDecoration(
+                    color: Colors.blue,
+                    shape: BoxShape.circle,
+                    border: Border.all(color: Colors.white, width: 3),
+                    boxShadow: const [
+                      BoxShadow(color: Colors.black26, blurRadius: 4),
+                    ],
+                  ),
+                ),
+              ),
+            ],
+          ),
         const RichAttributionWidget(
           attributions: [
             TextSourceAttribution('OpenStreetMap contributors'),
@@ -94,17 +154,17 @@ class _HaloMap extends StatelessWidget {
           LatLng(segment.endLat, segment.endLng),
         ],
         color: _colorForBand(segment.colorBand),
-        strokeWidth: 6.0,
+        strokeWidth: 5.0,
       );
 
   Color _colorForBand(String band) => switch (band) {
         'GREEN' => const Color(0xFF4CAF50),
         'YELLOW' => const Color(0xFFFFC107),
-        _ => const Color(0xFFF44336), // RED
+        _ => const Color(0xFFF44336),
       };
 }
 
-// ── Error banner ───────────────────────────────────────────────────────────
+// ── Error banner ──────────────────────────────────────────────────────────────
 
 class _ErrorBanner extends StatelessWidget {
   const _ErrorBanner({required this.message});
@@ -122,39 +182,10 @@ class _ErrorBanner extends StatelessWidget {
           child: Padding(
             padding: const EdgeInsets.all(12),
             child: Text(
-              'Unable to load scores — showing demo data.\n$message',
+              'Unable to load scores.\n$message',
               style: const TextStyle(color: Colors.white, fontSize: 12),
             ),
           ),
         ),
       );
 }
-
-// ── Dummy data (used when API is unreachable) ───────────────────────────────
-
-List<SegmentScore> _dummySegments() => [
-      const SegmentScore(
-        segmentId: 'demo-green',
-        wsiScore: 0.82,
-        confidence: 0.9,
-        colorBand: 'GREEN',
-        startLat: 34.0522, startLng: -118.2437,
-        endLat: 34.0532, endLng: -118.2427,
-      ),
-      const SegmentScore(
-        segmentId: 'demo-yellow',
-        wsiScore: 0.50,
-        confidence: 0.6,
-        colorBand: 'YELLOW',
-        startLat: 34.0532, startLng: -118.2427,
-        endLat: 34.0542, endLng: -118.2417,
-      ),
-      const SegmentScore(
-        segmentId: 'demo-red',
-        wsiScore: 0.21,
-        confidence: 0.4,
-        colorBand: 'RED',
-        startLat: 34.0542, startLng: -118.2417,
-        endLat: 34.0552, endLng: -118.2407,
-      ),
-    ];
