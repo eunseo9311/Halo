@@ -42,6 +42,13 @@ class _LoggingInterceptor extends Interceptor {
   }
 
   @override
+  void onResponse(Response response, ResponseInterceptorHandler handler) {
+    // ignore: avoid_print
+    print('[API] Response: ${response.statusCode} ${response.requestOptions.path}');
+    super.onResponse(response, handler);
+  }
+
+  @override
   void onError(DioException err, ErrorInterceptorHandler handler) {
     // ignore: avoid_print
     print('[API] Error: ${err.response?.statusCode} ${err.message}');

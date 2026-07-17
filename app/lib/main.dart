@@ -5,6 +5,13 @@ import 'package:halo/core/router/app_router.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
+  FlutterError.onError = (details) {
+    // ignore: avoid_print
+    print('[FLUTTER ERROR] ${details.exceptionAsString()}');
+    // ignore: avoid_print
+    print('[FLUTTER ERROR STACK] ${details.stack}');
+    FlutterError.presentError(details);
+  };
   await dotenv.load(fileName: '.env');
   runApp(const ProviderScope(child: HaloApp()));
 }
