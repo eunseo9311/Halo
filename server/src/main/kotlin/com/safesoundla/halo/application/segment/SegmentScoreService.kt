@@ -25,7 +25,7 @@ class SegmentScoreService(
      *   1° latitude  ≈ 111 km  (constant)
      *   1° longitude ≈ 111 km × cos(lat)
      *
-     * Results are capped at 500 to avoid overloading the Flutter client.
+     * Results are capped at 200 to avoid overloading the Flutter map renderer.
      */
     fun findNearby(lat: Double, lng: Double, radiusMeters: Int): List<SegmentScore> {
         val latDelta = radiusMeters / 111_000.0
@@ -35,6 +35,6 @@ class SegmentScoreService(
             maxLat = lat + latDelta,
             minLng = lng - lngDelta,
             maxLng = lng + lngDelta,
-        ).take(500)
+        ).take(200)
     }
 }

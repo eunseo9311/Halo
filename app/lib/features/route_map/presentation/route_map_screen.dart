@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_map/flutter_map.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -29,9 +31,8 @@ final _locationProvider = FutureProvider<LatLng>((ref) async {
     final pos = await Geolocator.getCurrentPosition(
       locationSettings: const LocationSettings(
         accuracy: LocationAccuracy.high,
-        timeLimit: Duration(seconds: 10),
       ),
-    );
+    ).timeout(const Duration(seconds: 10), onTimeout: () => throw TimeoutException('GPS timeout'));
     return LatLng(pos.latitude, pos.longitude);
   } catch (_) {
     return _defaultCenter;

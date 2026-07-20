@@ -43,7 +43,7 @@ class SegmentRepository {
   Future<List<SegmentScore>> fetchNearby({
     required double lat,
     required double lng,
-    int radiusMeters = 500,
+    int radiusMeters = 200,
   }) async {
     final response = await _dio.get<Map<String, dynamic>>(
       '/api/v1/segments/scores',
