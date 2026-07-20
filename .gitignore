@@ -32,6 +32,7 @@ server/.gradle/
 server/build/
 server/out/
 server/*.class
+server/.kotlin/
 server/!**/src/
 server/application-local.yml
 server/application-dev.yml
