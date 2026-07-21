@@ -9,6 +9,8 @@ import com.safesoundla.halo.infrastructure.aidata.model.SafeZonesGeoJson
 import com.safesoundla.halo.infrastructure.aidata.model.SegmentFeature
 import com.safesoundla.halo.infrastructure.aidata.model.SegmentsGeoJson
 import com.safesoundla.halo.infrastructure.aidata.model.WsiScoresFile
+import org.jgrapht.graph.DefaultWeightedEdge
+import org.jgrapht.graph.WeightedMultigraph
 import org.slf4j.LoggerFactory
 import org.springframework.boot.context.event.ApplicationReadyEvent
 import org.springframework.context.event.EventListener
@@ -94,11 +96,14 @@ class AiDataLoader(
         val validScores = validateScores(wsiFile, segmentMap)
         val validSafeZones = validateSafeZones(safeZonesFile, segmentMap)
 
+        val routeGraph = buildRouteGraph(segmentMap)
+
         return AiDataSnapshot(
-            meta = wsiFile.meta,
-            segments = segmentMap,
-            scores = validScores,
-            safeZones = validSafeZones,
+            meta       = wsiFile.meta,
+            segments   = segmentMap,
+            scores     = validScores,
+            safeZones  = validSafeZones,
+            routeGraph = routeGraph,
         )
     }
 
@@ -146,6 +151,53 @@ class AiDataLoader(
             log.warn("[AI-DATA] Total orphaned nearby_segment references: $totalOrphaned")
         }
         return safeZonesFile.features
+    }
+
+    // ── Route graph construction ──────────────────────────────────────────────
+
+    /**
+     * Builds a [RouteGraph] from the validated segment map.
+     *
+     * - Vertices = node IDs from connects[].
+     * - Edges = one per segment, base weight = length_m (used for shortest-path queries).
+     * - [RouteGraph.edgeToSegmentId] enables dynamic per-slot WSI cost at query time.
+     * - [RouteGraph.nodeCoords] stores (lat, lng) for the A* Euclidean heuristic.
+     *
+     * Uses [WeightedMultigraph] to support parallel segments between the same pair of nodes
+     * (e.g. segment_id "111_222_0" and "111_222_1").
+     */
+    private fun buildRouteGraph(segments: Map<String, SegmentFeature>): RouteGraph {
+        val graph = WeightedMultigraph<String, DefaultWeightedEdge>(DefaultWeightedEdge::class.java)
+        val edgeToSegmentId = HashMap<DefaultWeightedEdge, String>(segments.size)
+        val nodeCoords = HashMap<String, DoubleArray>(segments.size * 2)
+        var skipped = 0
+
+        for (segment in segments.values) {
+            val props = segment.properties
+            if (props.connects.size < 2) {
+                log.warn("[AI-DATA] Segment '${props.segmentId}' has fewer than 2 nodes in connects — skipped from graph")
+                skipped++
+                continue
+            }
+            val nodeA = props.connects[0]
+            val nodeB = props.connects[1]
+
+            graph.addVertex(nodeA)
+            graph.addVertex(nodeB)
+            // Last-write wins for shared node coords — values must be identical across segments
+            nodeCoords[nodeA] = doubleArrayOf(segment.startLat, segment.startLng)
+            nodeCoords[nodeB] = doubleArrayOf(segment.endLat,   segment.endLng)
+
+            val edge = graph.addEdge(nodeA, nodeB)
+            if (edge != null) {
+                graph.setEdgeWeight(edge, props.lengthM)
+                edgeToSegmentId[edge] = props.segmentId
+            }
+        }
+
+        log.info("[AI-DATA] Route graph: vertices=${graph.vertexSet().size}, " +
+            "edges=${graph.edgeSet().size}, skipped=$skipped")
+        return RouteGraph(graph, edgeToSegmentId, nodeCoords)
     }
 
     // ── Resource resolution ───────────────────────────────────────────────────

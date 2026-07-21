@@ -3,7 +3,10 @@ package com.safesoundla.halo.presentation.segment
 import com.safesoundla.halo.application.segment.AiSegmentService
 import com.safesoundla.halo.infrastructure.aidata.AiDataSnapshot
 import com.safesoundla.halo.infrastructure.aidata.AiDataStore
+import com.safesoundla.halo.infrastructure.aidata.RouteGraph
 import com.safesoundla.halo.infrastructure.aidata.model.*
+import org.jgrapht.graph.DefaultWeightedEdge
+import org.jgrapht.graph.WeightedMultigraph
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
 import kotlin.test.assertEquals
@@ -74,9 +77,16 @@ class HighIncidentFilterTest {
             segments   = mapOf(segmentId to segment),
             scores     = mapOf(segmentId to scoreEntry),
             safeZones  = emptyList(),
+            routeGraph = emptyRouteGraph(),
         ))
         service = AiSegmentService(store)
     }
+
+    private fun emptyRouteGraph() = RouteGraph(
+        WeightedMultigraph(DefaultWeightedEdge::class.java),
+        emptyMap(),
+        emptyMap(),
+    )
 
     // ── Public response tests ─────────────────────────────────────────────────
 
@@ -109,10 +119,11 @@ class HighIncidentFilterTest {
     fun `public response is empty factors list when all factors are high_incident`() {
         val onlyHighIncident = scoreEntry.copy(factors = listOf(listOf("high_incident")))
         store.set(AiDataSnapshot(
-            meta      = meta,
-            segments  = mapOf(segmentId to segment),
-            scores    = mapOf(segmentId to onlyHighIncident),
-            safeZones = emptyList(),
+            meta       = meta,
+            segments   = mapOf(segmentId to segment),
+            scores     = mapOf(segmentId to onlyHighIncident),
+            safeZones  = emptyList(),
+            routeGraph = emptyRouteGraph(),
         ))
         val responses = service.findNearbyPublic(
             lat = 34.0522, lng = -118.2437, radiusMeters = 500, slotIndex = 0

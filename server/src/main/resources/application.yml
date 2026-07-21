@@ -34,6 +34,8 @@ logging:
 halo:
   db:
     enabled: false
+  routing:
+    safety-weight: 1.0   # see RoutingProperties; 0.0=pure-shortest, 1.0=default, 2.0+=safety-biased
   ai-data:
     segments-path: ${HALO_AI_DATA_SEGMENTS_PATH:classpath:ai-data/segments.geojson}
     wsi-scores-path: ${HALO_AI_DATA_WSI_SCORES_PATH:classpath:ai-data/wsi_scores.json}
@@ -45,16 +47,16 @@ spring:
   config:
     activate:
       on-profile: "!db"
-  # Exclude all DataSource / JPA / Flyway autoconfiguration.
+  # Exclude DataSource / JPA autoconfiguration (Spring Boot 4.x package names).
   # This lets the server start without a PostgreSQL connection.
+  # Flyway is managed by FlywayConfig.kt (@ConditionalOnProperty) — no exclusion needed.
   # Removed automatically when the "db" profile is added (see section below).
   autoconfigure:
     exclude:
-      - org.springframework.boot.autoconfigure.jdbc.DataSourceAutoConfiguration
-      - org.springframework.boot.autoconfigure.orm.jpa.HibernateJpaAutoConfiguration
-      - org.springframework.boot.autoconfigure.data.jpa.JpaRepositoriesAutoConfiguration
-      - org.springframework.boot.autoconfigure.flyway.FlywayAutoConfiguration
-      - org.springframework.boot.autoconfigure.jdbc.DataSourceTransactionManagerAutoConfiguration
+      - org.springframework.boot.jdbc.autoconfigure.DataSourceAutoConfiguration
+      - org.springframework.boot.hibernate.autoconfigure.HibernateJpaAutoConfiguration
+      - org.springframework.boot.data.jpa.autoconfigure.DataJpaRepositoriesAutoConfiguration
+      - org.springframework.boot.jdbc.autoconfigure.DataSourceTransactionManagerAutoConfiguration
 
 # ══ DB enabled — activate with SPRING_PROFILES_ACTIVE=local,db ══════════════
 ---
