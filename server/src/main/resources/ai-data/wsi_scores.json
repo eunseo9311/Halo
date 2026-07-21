@@ -1,0 +1,54 @@
+{
+  "_comment": "PLACEHOLDER — AI team will replace with real data (32-slot arrays). Slot count here: 4.",
+  "meta": {
+    "wsi_version": "2026-07-22T00:00:00Z",
+    "model_version": "v0.1-placeholder",
+    "beta": {
+      "risk": 0.6,
+      "light": 0.3,
+      "comfort": 0.1
+    },
+    "tier_thresholds": {
+      "green": 0.7,
+      "yellow": 0.4
+    },
+    "slots": [
+      {"index": 0, "dow_group": "weekday", "hour_start": 0,  "hour_end": 12, "label": "weekday_day"},
+      {"index": 1, "dow_group": "weekday", "hour_start": 12, "hour_end": 24, "label": "weekday_night"},
+      {"index": 2, "dow_group": "saturday", "hour_start": 0, "hour_end": 12, "label": "saturday_day"},
+      {"index": 3, "dow_group": "saturday", "hour_start": 12,"hour_end": 24, "label": "saturday_night"}
+    ]
+  },
+  "scores": {
+    "111_222_0": {
+      "wsi":        [0.82, 0.55, 0.78, 0.61],
+      "tier":       ["GREEN", "YELLOW", "GREEN", "YELLOW"],
+      "components": {
+        "risk":    [0.15, 0.40, 0.20, 0.35],
+        "light":   [0.90, 0.65, 0.85, 0.70],
+        "comfort": [0.75, 0.60, 0.72, 0.63]
+      },
+      "factors": [
+        ["well_lit", "low_traffic"],
+        ["moderate_traffic", "high_incident"],
+        ["well_lit"],
+        ["high_incident", "moderate_traffic"]
+      ]
+    },
+    "222_333_0": {
+      "wsi":        [0.71, 0.43, 0.68, 0.38],
+      "tier":       ["GREEN", "YELLOW", "YELLOW", "RED"],
+      "components": {
+        "risk":    [0.25, 0.50, 0.30, 0.60],
+        "light":   [0.80, 0.55, 0.75, 0.40],
+        "comfort": [0.68, 0.45, 0.60, 0.30]
+      },
+      "factors": [
+        ["well_lit"],
+        ["poor_lighting", "high_incident"],
+        ["moderate_traffic"],
+        ["poor_lighting", "high_incident", "construction"]
+      ]
+    }
+  }
+}

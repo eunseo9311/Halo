@@ -6,6 +6,13 @@ import org.springframework.stereotype.Service
 import kotlin.math.cos
 import kotlin.math.PI
 
+/**
+ * DORMANT — DB-backed segment service, kept for the MVP back-half (user feedback, incident reports).
+ *
+ * The SegmentScoreController now uses [AiSegmentService] (file-based, in-memory).
+ * This service will be re-wired once the DB features are reactivated.
+ * Do NOT delete — it is needed for future user-data endpoints.
+ */
 @Service
 class SegmentScoreService(
     private val repository: SegmentScoreRepository,

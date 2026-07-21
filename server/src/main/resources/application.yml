@@ -27,3 +27,15 @@ server:
 logging:
   level:
     com.safesoundla.halo: DEBUG
+
+# ── AI data file paths ────────────────────────────────────────────────────────
+# Default: committed placeholder files on the classpath (src/main/resources/ai-data/).
+# Override via environment variable to point at externally mounted production files:
+#   HALO_AI_DATA_SEGMENTS_PATH=file:/data/ai/segments.geojson
+#   HALO_AI_DATA_WSI_SCORES_PATH=file:/data/ai/wsi_scores.json
+#   HALO_AI_DATA_SAFEZONES_PATH=file:/data/ai/safezones.geojson
+halo:
+  ai-data:
+    segments-path: ${HALO_AI_DATA_SEGMENTS_PATH:classpath:ai-data/segments.geojson}
+    wsi-scores-path: ${HALO_AI_DATA_WSI_SCORES_PATH:classpath:ai-data/wsi_scores.json}
+    safezones-path: ${HALO_AI_DATA_SAFEZONES_PATH:classpath:ai-data/safezones.geojson}

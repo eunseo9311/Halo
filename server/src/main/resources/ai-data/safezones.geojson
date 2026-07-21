@@ -1,0 +1,32 @@
+{
+  "type": "FeatureCollection",
+  "_comment": "PLACEHOLDER — AI team will replace. 'school' category has 0 entries (no data).",
+  "features": [
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [-118.2432, 34.0525]
+      },
+      "properties": {
+        "safezone_id": "sz_001",
+        "name": "LAPD Central Division",
+        "category": "police_station",
+        "nearby_segments": ["111_222_0", "222_333_0"]
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [-118.2440, 34.0510]
+      },
+      "properties": {
+        "safezone_id": "sz_002",
+        "name": "LA Fire Station 9",
+        "category": "fire_station",
+        "nearby_segments": ["111_222_0"]
+      }
+    }
+  ]
+}

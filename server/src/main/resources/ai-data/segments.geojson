@@ -1,0 +1,34 @@
+{
+  "type": "FeatureCollection",
+  "_comment": "PLACEHOLDER — AI team will replace with real data. segment_id format: '{u}_{v}_{key}'",
+  "features": [
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "LineString",
+        "coordinates": [[-118.2437, 34.0522], [-118.2430, 34.0528]]
+      },
+      "properties": {
+        "segment_id": "111_222_0",
+        "connects": ["111", "222"],
+        "length_m": 87.5,
+        "district_id": "downtown_la",
+        "subarea_id": "civic_center"
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "LineString",
+        "coordinates": [[-118.2430, 34.0528], [-118.2422, 34.0535]]
+      },
+      "properties": {
+        "segment_id": "222_333_0",
+        "connects": ["222", "333"],
+        "length_m": 103.2,
+        "district_id": "downtown_la",
+        "subarea_id": "civic_center"
+      }
+    }
+  ]
+}
