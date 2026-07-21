@@ -1,6 +1,7 @@
 package com.safesoundla.halo.infrastructure.config
 
 import org.flywaydb.core.Flyway
+import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty
 import org.springframework.context.annotation.Bean
 import org.springframework.context.annotation.Configuration
 import javax.sql.DataSource
@@ -11,9 +12,11 @@ import javax.sql.DataSource
  * Declaring the bean here guarantees migrations run during context refresh,
  * before any JPA repository tries to use the schema.
  *
+ * Gated by [halo.db.enabled]: only runs when the "db" Spring profile is active.
  * The autoconfiguration backs off via @ConditionalOnMissingBean(Flyway::class).
  */
 @Configuration
+@ConditionalOnProperty(name = ["halo.db.enabled"], havingValue = "true")
 class FlywayConfig {
 
     @Bean(initMethod = "migrate")

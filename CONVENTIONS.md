@@ -136,7 +136,42 @@ cp server/src/main/resources/application-local.yml.example server/src/main/resou
 cp data/.env.example data/.env
 ```
 
-## 7. Data Contract: DB Schema & API Spec
+## 7. DB Toggle (`halo.db.enabled`)
+
+**PostgreSQL/JPA/Flyway는 현재 비활성 상태입니다.**
+
+서버는 AI팀이 배치로 생성한 정적 파일(segments.geojson / wsi_scores.json / safezones.geojson)을
+메모리에 올려 서빙합니다. DB 없이도 완전히 동작합니다.
+
+### DB를 켜야 할 시점
+
+사용자 피드백, 신고 위치 저장 등 **사용자 데이터 저장 기능** 개발을 시작할 때
+`db` Spring 프로파일을 활성화하면 됩니다.
+
+```bash
+# 로컬 개발
+cd server && SPRING_PROFILES_ACTIVE=local,db ./gradlew bootRun
+
+# Docker
+docker-compose --profile db up
+```
+
+### 내부 동작
+
+| 상태 | 활성 프로파일 | `halo.db.enabled` | DataSource/JPA/Flyway |
+|---|---|---|---|
+| 기본 (현재) | `local` | `false` | **비활성** (autoconfigure.exclude) |
+| DB 활성 | `local,db` | `true` | 활성, Flyway 마이그레이션 자동 실행 |
+
+관련 파일:
+- `application.yml` — `!db` / `db` 프로파일 분기 정의
+- `FlywayConfig.kt` — `@ConditionalOnProperty(halo.db.enabled=true)`
+- `SegmentScoreService.kt` — `@ConditionalOnProperty(halo.db.enabled=true)` (휴면 중)
+- `docker-compose.yml` — `--profile db` 로 DB 서비스 기동
+
+---
+
+## 8. Data Contract: DB Schema & API Spec
 
 ### DB Schema Ownership
 **Spring Boot (Flyway) owns the schema.**

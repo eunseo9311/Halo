@@ -1,20 +1,25 @@
-# Copy this file to application-local.yml (gitignored) and fill in your local values
-spring:
-  datasource:
-    url: jdbc:postgresql://localhost:5432/halo
-    username: halo
-    password: halo_secret
-    driver-class-name: org.postgresql.Driver
-  jpa:
-    show-sql: true
-    properties:
-      hibernate:
-        format_sql: true
+# ──────────────────────────────────────────────────────────────────────────────
+# Copy this file to application-local.yml (gitignored) for local overrides.
+# application-local.yml is loaded on top of application.yml.
+#
+# DB is OFF by default. To turn it on, activate the "db" Spring profile:
+#
+#   cd server && SPRING_PROFILES_ACTIVE=local,db ./gradlew bootRun
+#
+# See CONVENTIONS.md § 8 for the full story.
+# ──────────────────────────────────────────────────────────────────────────────
 
-# CORS: allow Flutter web dev server and Android emulator
-app:
-  cors:
-    allowed-origins:
-      - "http://localhost:3000"
-      - "http://localhost:5173"
-      - "http://10.0.2.2:8080"
+# Local DB credential overrides (only needed when running with the "db" profile)
+# Defaults in application.yml already point to localhost:5432/halo / halo / halo_secret
+# so this file can stay empty unless you need different values.
+#
+# spring:
+#   datasource:
+#     url: jdbc:postgresql://localhost:5432/halo
+#     username: halo
+#     password: halo_secret
+#   jpa:
+#     show-sql: true
+#     properties:
+#       hibernate:
+#         format_sql: true
