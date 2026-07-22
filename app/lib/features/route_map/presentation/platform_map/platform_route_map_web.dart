@@ -1,6 +1,7 @@
 import 'package:flutter/widgets.dart';
 import 'package:halo/features/route_map/domain/map_geometry.dart';
 import 'package:halo/features/route_map/presentation/platform_map/flutter_route_map.dart';
+import 'package:halo/features/route_map/presentation/platform_map/map_interactions.dart';
 
 class PlatformRouteMap extends StatelessWidget {
   const PlatformRouteMap({
@@ -8,6 +9,9 @@ class PlatformRouteMap extends StatelessWidget {
     required this.geometry,
     required this.showUserLocation,
     required this.recenterGeneration,
+    this.onMapTap,
+    this.onCameraMove,
+    this.onCameraIdle,
     super.key,
   });
 
@@ -15,6 +19,9 @@ class PlatformRouteMap extends StatelessWidget {
   final MapGeometry geometry;
   final bool showUserLocation;
   final int recenterGeneration;
+  final MapTapCallback? onMapTap;
+  final MapCameraCallback? onCameraMove;
+  final MapCameraCallback? onCameraIdle;
 
   @override
   Widget build(BuildContext context) => FlutterRouteMap(
@@ -22,5 +29,8 @@ class PlatformRouteMap extends StatelessWidget {
     geometry: geometry,
     showUserLocation: showUserLocation,
     recenterGeneration: recenterGeneration,
+    onMapTap: onMapTap,
+    onCameraMove: onCameraMove,
+    onCameraIdle: onCameraIdle,
   );
 }

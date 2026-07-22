@@ -5,6 +5,7 @@ import 'package:flutter/widgets.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
 import 'package:halo/features/route_map/domain/map_geometry.dart';
 import 'package:halo/features/route_map/presentation/platform_map/flutter_route_map.dart';
+import 'package:halo/features/route_map/presentation/platform_map/map_interactions.dart';
 
 const _androidMapId = String.fromEnvironment('GOOGLE_MAPS_ANDROID_MAP_ID');
 const _iosMapId = String.fromEnvironment('GOOGLE_MAPS_IOS_MAP_ID');
@@ -15,6 +16,9 @@ class PlatformRouteMap extends StatefulWidget {
     required this.geometry,
     required this.showUserLocation,
     required this.recenterGeneration,
+    this.onMapTap,
+    this.onCameraMove,
+    this.onCameraIdle,
     super.key,
   });
 
@@ -22,6 +26,9 @@ class PlatformRouteMap extends StatefulWidget {
   final MapGeometry geometry;
   final bool showUserLocation;
   final int recenterGeneration;
+  final MapTapCallback? onMapTap;
+  final MapCameraCallback? onCameraMove;
+  final MapCameraCallback? onCameraIdle;
 
   @override
   State<PlatformRouteMap> createState() => _PlatformRouteMapState();
@@ -29,6 +36,7 @@ class PlatformRouteMap extends StatefulWidget {
 
 class _PlatformRouteMapState extends State<PlatformRouteMap> {
   GoogleMapController? _googleController;
+  MapCameraView? _latestCamera;
 
   @override
   void didUpdateWidget(covariant PlatformRouteMap oldWidget) {
@@ -64,6 +72,9 @@ class _PlatformRouteMapState extends State<PlatformRouteMap> {
         geometry: widget.geometry,
         showUserLocation: widget.showUserLocation,
         recenterGeneration: widget.recenterGeneration,
+        onMapTap: widget.onMapTap,
+        onCameraMove: widget.onCameraMove,
+        onCameraIdle: widget.onCameraIdle,
       );
     }
 
@@ -74,7 +85,18 @@ class _PlatformRouteMapState extends State<PlatformRouteMap> {
       _ => '',
     };
     return GoogleMap(
-      onMapCreated: (controller) => _googleController = controller,
+      onMapCreated: (controller) {
+        _googleController = controller;
+        final latestCenter = widget.center;
+        _latestCamera = MapCameraView(center: latestCenter, zoom: 15);
+        unawaited(
+          controller.moveCamera(
+            CameraUpdate.newLatLng(
+              LatLng(latestCenter.latitude, latestCenter.longitude),
+            ),
+          ),
+        );
+      },
       initialCameraPosition: CameraPosition(target: mapCenter, zoom: 15),
       mapId: configuredMapId.isEmpty ? null : configuredMapId,
       polylines: {
@@ -88,6 +110,23 @@ class _PlatformRouteMapState extends State<PlatformRouteMap> {
             color: Color(line.colorValue),
             width: line.strokeWidth.round(),
           ),
+      },
+      onTap: (point) =>
+          widget.onMapTap?.call(MapCoordinate(point.latitude, point.longitude)),
+      onCameraMove: (position) {
+        final camera = MapCameraView(
+          center: MapCoordinate(
+            position.target.latitude,
+            position.target.longitude,
+          ),
+          zoom: position.zoom,
+        );
+        _latestCamera = camera;
+        widget.onCameraMove?.call(camera);
+      },
+      onCameraIdle: () {
+        final camera = _latestCamera;
+        if (camera != null) widget.onCameraIdle?.call(camera);
       },
       // Use the native location puck so its size and accuracy indication remain
       // correct across zoom levels. Location permission is requested upstream.
