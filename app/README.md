@@ -1,5 +1,18 @@
 # Halo
 
+## Offline map demo
+
+Run the deterministic LA demo in a debug or profile build with:
+
+```sh
+flutter run --dart-define=HALO_MAP_DEMO=true
+```
+
+The demo uses a fixed Downtown LA center, 200 generated WSI segments, and three
+route overlays. It does not request location permission or call the segment
+API; the active platform map engine still provides the background map.
+`HALO_MAP_DEMO` defaults to `false` and is rejected by release builds.
+
 ## Google Maps setup
 
 Native Google Maps is used on Android and iOS. `flutter_map` remains available
