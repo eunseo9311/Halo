@@ -17,9 +17,8 @@ dependencies:
   # Networking
   dio: ^5.7.0
 
-  # Map — flutter_map uses OpenStreetMap tiles (no API key, MIT license).
-  # Color overlays via Polyline widget are natively supported.
-  # To switch to Google Maps: change TileLayer URL only.
+  # Maps — Google Maps on Android/iOS; flutter_map remains the Web/macOS fallback.
+  google_maps_flutter: ^2.17.1
   flutter_map: ^7.0.2
   latlong2: ^0.9.1
 
@@ -34,6 +33,8 @@ dependencies:
 
 dev_dependencies:
   flutter_test:
+    sdk: flutter
+  integration_test:
     sdk: flutter
   flutter_lints: ^6.0.0
   riverpod_lint: ^2.6.5

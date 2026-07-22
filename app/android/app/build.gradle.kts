@@ -4,6 +4,21 @@ plugins {
     id("dev.flutter.flutter-gradle-plugin")
 }
 
+val localProperties = java.util.Properties().apply {
+    val localPropertiesFile = rootProject.file("local.properties")
+    if (localPropertiesFile.exists()) {
+        localPropertiesFile.inputStream().use(::load)
+    }
+}
+val googleMapsApiKey = localProperties.getProperty("GOOGLE_MAPS_API_KEY", "")
+
+if (googleMapsApiKey.isBlank() || googleMapsApiKey.contains("YOUR_", ignoreCase = true)) {
+    throw GradleException(
+        "Missing GOOGLE_MAPS_API_KEY in android/local.properties. " +
+            "See app/README.md for Google Maps setup."
+    )
+}
+
 android {
     namespace = "com.safesoundla.halo"
     compileSdk = flutter.compileSdkVersion
@@ -19,10 +34,12 @@ android {
         applicationId = "com.safesoundla.halo"
         // You can update the following values to match your application needs.
         // For more information, see: https://flutter.dev/to/review-gradle-config.
-        minSdk = flutter.minSdkVersion
+        minSdk = 24
         targetSdk = flutter.targetSdkVersion
         versionCode = flutter.versionCode
         versionName = flutter.versionName
+        manifestPlaceholders["GOOGLE_MAPS_API_KEY"] =
+            googleMapsApiKey
     }
 
     buildTypes {

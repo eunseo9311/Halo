@@ -1,17 +1,42 @@
-# halo
+# Halo
 
-A new Flutter project.
+## Google Maps setup
 
-## Getting Started
+Native Google Maps is used on Android and iOS. `flutter_map` remains available
+for the Web and macOS implementations. Android SDK 24+ and iOS 14+ are required.
+Never commit API keys.
 
-This project is a starting point for a Flutter application.
+- Android: add `GOOGLE_MAPS_API_KEY=...` to the untracked
+  `android/local.properties` file.
+- iOS: copy `ios/Flutter/Secrets.xcconfig.example` to
+  `ios/Flutter/Secrets.xcconfig` and replace the sample value.
 
-A few resources to get you started if this is your first Flutter project:
+Restrict each key to its platform and this app's package/bundle identifier in
+Google Cloud Console.
 
-- [Learn Flutter](https://docs.flutter.dev/get-started/learn-flutter)
-- [Write your first Flutter app](https://docs.flutter.dev/get-started/codelab)
-- [Flutter learning resources](https://docs.flutter.dev/reference/learning-resources)
+Cloud Map IDs are optional and are not secrets. Supply platform-specific IDs as
+build-time defines when running or building the app:
 
-For help getting started with Flutter development, view the
-[online documentation](https://docs.flutter.dev/), which offers tutorials,
-samples, guidance on mobile development, and a full API reference.
+```sh
+flutter run \
+  --dart-define=GOOGLE_MAPS_ANDROID_MAP_ID=YOUR_ANDROID_MAP_ID \
+  --dart-define=GOOGLE_MAPS_IOS_MAP_ID=YOUR_IOS_MAP_ID
+```
+
+The route-map implementation reads those values with `String.fromEnvironment`
+and omits `mapId` when the corresponding value is empty.
+
+## Native polyline stress test
+
+After configuring a restricted key and connecting an Android or iOS device,
+exercise 200 WSI segments plus three route overlays with repeated camera updates:
+
+```sh
+flutter test integration_test/google_maps_polyline_stress_test.dart \
+  -d DEVICE_ID \
+  --dart-define=GOOGLE_MAPS_ANDROID_MAP_ID=YOUR_ANDROID_MAP_ID \
+  --dart-define=GOOGLE_MAPS_IOS_MAP_ID=YOUR_IOS_MAP_ID
+```
+
+Run this on both platforms before removing or raising the server's existing
+200-segment response cap.
