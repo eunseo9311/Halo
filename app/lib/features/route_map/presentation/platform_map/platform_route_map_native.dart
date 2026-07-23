@@ -19,6 +19,7 @@ class PlatformRouteMap extends StatefulWidget {
     this.onMapTap,
     this.onCameraMove,
     this.onCameraIdle,
+    this.northResetGeneration = 0,
     super.key,
   });
 
@@ -29,6 +30,7 @@ class PlatformRouteMap extends StatefulWidget {
   final MapTapCallback? onMapTap;
   final MapCameraCallback? onCameraMove;
   final MapCameraCallback? onCameraIdle;
+  final int northResetGeneration;
 
   @override
   State<PlatformRouteMap> createState() => _PlatformRouteMapState();
@@ -37,15 +39,32 @@ class PlatformRouteMap extends StatefulWidget {
 class _PlatformRouteMapState extends State<PlatformRouteMap> {
   GoogleMapController? _googleController;
   MapCameraView? _latestCamera;
+  var _pendingNorthReset = false;
 
   @override
   void didUpdateWidget(covariant PlatformRouteMap oldWidget) {
     super.didUpdateWidget(oldWidget);
-    if (oldWidget.recenterGeneration != widget.recenterGeneration ||
+    final recenterRequested =
+        oldWidget.recenterGeneration != widget.recenterGeneration ||
         oldWidget.center.latitude != widget.center.latitude ||
-        oldWidget.center.longitude != widget.center.longitude) {
-      final controller = _googleController;
-      if (controller != null) {
+        oldWidget.center.longitude != widget.center.longitude;
+    final northResetRequested =
+        oldWidget.northResetGeneration != widget.northResetGeneration;
+    final controller = _googleController;
+    if (controller == null) {
+      _pendingNorthReset = _pendingNorthReset || northResetRequested;
+    } else {
+      if (northResetRequested) {
+        final camera =
+            _latestCamera ?? MapCameraView(center: widget.center, zoom: 15);
+        final target = recenterRequested ? widget.center : camera.center;
+        final resetCamera = northResetCameraPosition(
+          MapCameraView(center: target, zoom: camera.zoom),
+        );
+        unawaited(
+          controller.animateCamera(CameraUpdate.newCameraPosition(resetCamera)),
+        );
+      } else if (recenterRequested) {
         unawaited(
           controller.animateCamera(
             CameraUpdate.newLatLng(
@@ -75,6 +94,7 @@ class _PlatformRouteMapState extends State<PlatformRouteMap> {
         onMapTap: widget.onMapTap,
         onCameraMove: widget.onCameraMove,
         onCameraIdle: widget.onCameraIdle,
+        northResetGeneration: widget.northResetGeneration,
       );
     }
 
@@ -89,11 +109,17 @@ class _PlatformRouteMapState extends State<PlatformRouteMap> {
         _googleController = controller;
         final latestCenter = widget.center;
         _latestCamera = MapCameraView(center: latestCenter, zoom: 15);
+        final pendingNorthReset = _pendingNorthReset;
+        _pendingNorthReset = false;
         unawaited(
           controller.moveCamera(
-            CameraUpdate.newLatLng(
-              LatLng(latestCenter.latitude, latestCenter.longitude),
-            ),
+            pendingNorthReset
+                ? CameraUpdate.newCameraPosition(
+                    northResetCameraPosition(_latestCamera!),
+                  )
+                : CameraUpdate.newLatLng(
+                    LatLng(latestCenter.latitude, latestCenter.longitude),
+                  ),
           ),
         );
       },
@@ -136,3 +162,10 @@ class _PlatformRouteMapState extends State<PlatformRouteMap> {
     );
   }
 }
+
+CameraPosition northResetCameraPosition(MapCameraView camera) => CameraPosition(
+  target: LatLng(camera.center.latitude, camera.center.longitude),
+  zoom: camera.zoom,
+  bearing: 0,
+  tilt: 0,
+);

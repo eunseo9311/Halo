@@ -17,6 +17,7 @@ class FlutterRouteMap extends StatefulWidget {
     this.onCameraIdle,
     this.mapController,
     this.tileProvider,
+    this.northResetGeneration = 0,
     super.key,
   });
 
@@ -29,6 +30,7 @@ class FlutterRouteMap extends StatefulWidget {
   final MapCameraCallback? onCameraIdle;
   final MapController? mapController;
   final TileProvider? tileProvider;
+  final int northResetGeneration;
 
   @override
   State<FlutterRouteMap> createState() => _FlutterRouteMapState();
@@ -39,6 +41,7 @@ class _FlutterRouteMapState extends State<FlutterRouteMap> {
   late final bool _ownsController;
   final _pendingCenter = PendingMapCenter();
   var _mapReady = false;
+  var _pendingNorthReset = false;
   Timer? _idleTimer;
 
   @override
@@ -59,6 +62,13 @@ class _FlutterRouteMapState extends State<FlutterRouteMap> {
         _controller.move(center, _controller.camera.zoom);
       } else {
         _pendingCenter.schedule(widget.center);
+      }
+    }
+    if (oldWidget.northResetGeneration != widget.northResetGeneration) {
+      if (_mapReady) {
+        _controller.rotate(0);
+      } else {
+        _pendingNorthReset = true;
       }
     }
   }
@@ -97,6 +107,10 @@ class _FlutterRouteMapState extends State<FlutterRouteMap> {
             LatLng(pendingCenter.latitude, pendingCenter.longitude),
             _controller.camera.zoom,
           );
+        }
+        if (_pendingNorthReset) {
+          _pendingNorthReset = false;
+          _controller.rotate(0);
         }
       },
       onTap: (_, point) =>

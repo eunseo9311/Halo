@@ -12,6 +12,7 @@ class PlatformRouteMap extends StatelessWidget {
     this.onMapTap,
     this.onCameraMove,
     this.onCameraIdle,
+    this.northResetGeneration = 0,
     super.key,
   });
 
@@ -22,6 +23,7 @@ class PlatformRouteMap extends StatelessWidget {
   final MapTapCallback? onMapTap;
   final MapCameraCallback? onCameraMove;
   final MapCameraCallback? onCameraIdle;
+  final int northResetGeneration;
 
   @override
   Widget build(BuildContext context) => FlutterRouteMap(
@@ -32,5 +34,6 @@ class PlatformRouteMap extends StatelessWidget {
     onMapTap: onMapTap,
     onCameraMove: onCameraMove,
     onCameraIdle: onCameraIdle,
+    northResetGeneration: northResetGeneration,
   );
 }

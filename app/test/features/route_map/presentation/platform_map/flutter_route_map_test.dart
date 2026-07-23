@@ -73,28 +73,38 @@ void main() {
 
   testWidgets('ready recenter preserves current zoom', (tester) async {
     final controller = MapController();
-    Widget map(MapCoordinate center, int generation) => MaterialApp(
-      home: FlutterRouteMap(
-        center: center,
-        geometry: const MapGeometry(polylines: []),
-        showUserLocation: false,
-        recenterGeneration: generation,
-        mapController: controller,
-        tileProvider: _TransparentTileProvider(),
-      ),
-    );
+    Widget map(MapCoordinate center, int generation, {int northReset = 0}) =>
+        MaterialApp(
+          home: FlutterRouteMap(
+            center: center,
+            geometry: const MapGeometry(polylines: []),
+            showUserLocation: false,
+            recenterGeneration: generation,
+            northResetGeneration: northReset,
+            mapController: controller,
+            tileProvider: _TransparentTileProvider(),
+          ),
+        );
 
     await tester.pumpWidget(map(initialCenter, 0));
-    controller.move(
-      const LatLng(34.0522, -118.2437),
-      17,
-    );
+    controller.move(const LatLng(34.0522, -118.2437), 17);
     await tester.pumpWidget(map(const MapCoordinate(34.06, -118.25), 1));
     await tester.pump();
 
     expect(tester.takeException(), isNull);
     expect(controller.camera.center, const LatLng(34.06, -118.25));
     expect(controller.camera.zoom, 17);
+    controller.rotate(42);
+
+    await tester.pumpWidget(
+      map(const MapCoordinate(34.06, -118.25), 1, northReset: 1),
+    );
+    await tester.pump();
+
+    expect(controller.camera.center, const LatLng(34.06, -118.25));
+    expect(controller.camera.zoom, 17);
+    expect(controller.camera.rotation, 0);
+    await tester.pumpWidget(const SizedBox());
     controller.dispose();
   });
 

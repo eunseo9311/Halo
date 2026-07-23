@@ -21,11 +21,12 @@ class HaloApp extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => MaterialApp.router(
-        title: 'Halo',
-        theme: ThemeData(
-          colorScheme: ColorScheme.fromSeed(seedColor: const Color(0xFF6B48FF)),
-          useMaterial3: true,
-        ),
-        routerConfig: appRouter,
-      );
+    title: 'Halo',
+    debugShowCheckedModeBanner: false,
+    theme: ThemeData(
+      colorScheme: ColorScheme.fromSeed(seedColor: const Color(0xFF6B48FF)),
+      useMaterial3: true,
+    ),
+    routerConfig: appRouter,
+  );
 }
