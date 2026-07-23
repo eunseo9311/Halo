@@ -1,3 +1,5 @@
+import 'package:device_preview/device_preview.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -13,7 +15,13 @@ Future<void> main() async {
     FlutterError.presentError(details);
   };
   await dotenv.load(fileName: '.env');
-  runApp(const ProviderScope(child: HaloApp()));
+  runApp(
+    DevicePreview(
+      enabled: kDebugMode,
+      defaultDevice: Devices.ios.iPhone15Pro,
+      builder: (context) => const ProviderScope(child: HaloApp()),
+    ),
+  );
 }
 
 class HaloApp extends StatelessWidget {
@@ -22,6 +30,8 @@ class HaloApp extends StatelessWidget {
   @override
   Widget build(BuildContext context) => MaterialApp.router(
         title: 'Halo',
+        locale: DevicePreview.locale(context),
+        builder: DevicePreview.appBuilder,
         theme: ThemeData(
           colorScheme: ColorScheme.fromSeed(seedColor: const Color(0xFF6B48FF)),
           useMaterial3: true,

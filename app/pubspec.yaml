@@ -32,6 +32,9 @@ dependencies:
   # Location
   geolocator: ^13.0.2
 
+  # Device preview — debug-only at runtime (kDebugMode), no-op in release builds
+  device_preview: ^1.2.0
+
 dev_dependencies:
   flutter_test:
     sdk: flutter
