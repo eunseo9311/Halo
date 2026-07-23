@@ -2,11 +2,24 @@ package com.safesoundla.halo.application.segment
 
 import com.safesoundla.halo.domain.segment.SegmentScore
 import com.safesoundla.halo.infrastructure.persistence.SegmentScoreRepository
+import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty
 import org.springframework.stereotype.Service
 import kotlin.math.cos
 import kotlin.math.PI
 
+/**
+ * DORMANT — DB-backed segment service, kept for the MVP back-half (user feedback, incident reports).
+ *
+ * The SegmentScoreController now uses [AiSegmentService] (file-based, in-memory).
+ * This service will be re-wired once the DB features are reactivated.
+ * Do NOT delete — it is needed for future user-data endpoints.
+ *
+ * Only instantiated when [halo.db.enabled=true] (i.e. "db" Spring profile active).
+ * Without the condition, [SegmentScoreRepository] would not exist as a bean
+ * (JPA autoconfiguration is excluded) and Spring would fail to inject it here.
+ */
 @Service
+@ConditionalOnProperty(name = ["halo.db.enabled"], havingValue = "true")
 class SegmentScoreService(
     private val repository: SegmentScoreRepository,
 ) {

@@ -1,8 +1,27 @@
 version: "3.9"
 
+# ── How to use ─────────────────────────────────────────────────────────────
+#
+# Default (no DB):
+#   docker-compose up server
+#   Server boots from AI data files only. No PostgreSQL needed.
+#
+# With DB (user-data features):
+#   docker-compose --profile db up
+#   Starts PostgreSQL + the server with the "db" Spring profile active.
+#   Flyway migrations run automatically on first boot.
+#
+# Dev tip: skip the server container and run Spring locally instead:
+#   docker-compose --profile db up db   # DB only
+#   cd server && SPRING_PROFILES_ACTIVE=local,db ./gradlew bootRun
+# ────────────────────────────────────────────────────────────────────────────
+
 services:
-  # ── PostgreSQL + PostGIS ─────────────────────────────────────────────────
+
+  # ── PostgreSQL + PostGIS ──────────────────────────────────────────────────
+  # Only starts when --profile db is passed.
   db:
+    profiles: [db]
     image: postgis/postgis:16-3.4
     container_name: halo-db
     environment:
@@ -19,9 +38,7 @@ services:
       timeout: 5s
       retries: 10
 
-  # ── Spring Boot API ──────────────────────────────────────────────────────
-  # Tip: during active development, run Spring from your IDE instead.
-  # Comment this service out and run: cd server && ./gradlew bootRun
+  # ── Spring Boot API — no DB (default) ────────────────────────────────────
   server:
     build:
       context: ./server
@@ -31,6 +48,19 @@ services:
       - "8080:8080"
     environment:
       SPRING_PROFILES_ACTIVE: local
+
+  # ── Spring Boot API — with DB ────────────────────────────────────────────
+  # Started automatically when --profile db is used.
+  server-db:
+    profiles: [db]
+    build:
+      context: ./server
+      dockerfile: Dockerfile
+    container_name: halo-server-db
+    ports:
+      - "8080:8080"
+    environment:
+      SPRING_PROFILES_ACTIVE: local,db
       SPRING_DATASOURCE_URL: jdbc:postgresql://db:5432/halo
       SPRING_DATASOURCE_USERNAME: halo
       SPRING_DATASOURCE_PASSWORD: halo_secret
