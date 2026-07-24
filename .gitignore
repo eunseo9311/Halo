@@ -40,6 +40,7 @@ server/application-dev.yml
 server/application-prod.yml
 server/.env
 server/*.env
+server/local-ai-data/
 # Keep examples
 !server/**/*.example
 
