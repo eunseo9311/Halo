@@ -36,6 +36,9 @@ halo:
     enabled: false
   routing:
     safety-weight: 1.0   # see RoutingProperties; 0.0=pure-shortest, 1.0=default, 2.0+=safety-biased
+  internal-api:
+    # Sensitive factors remain unreachable unless an operator explicitly opts in.
+    segment-scores-enabled: ${HALO_INTERNAL_SEGMENT_SCORES_ENABLED:false}
   ai-data:
     segments-path: ${HALO_AI_DATA_SEGMENTS_PATH:classpath:ai-data/segments.geojson}
     wsi-scores-path: ${HALO_AI_DATA_WSI_SCORES_PATH:classpath:ai-data/wsi_scores.json}

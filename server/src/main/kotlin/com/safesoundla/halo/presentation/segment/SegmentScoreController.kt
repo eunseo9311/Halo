@@ -27,22 +27,6 @@ class SegmentScoreController(
     ): ApiResponse<List<SegmentScoreResponse>> =
         ApiResponse.ok(service.findNearbyPublic(lat, lng, radiusMeters, slotIndex))
 
-    /**
-     * GET /api/v1/segments/scores/internal?lat=&lng=&radiusMeters=&slotIndex=
-     *
-     * Internal/B2G endpoint — response includes the full [factors] array (with high_incident).
-     * DO NOT expose this path via the public API gateway.
-     *
-     * TODO: Protect with an internal auth header or network policy before external deployment.
-     */
-    @GetMapping("/scores/internal")
-    fun getSegmentScoresInternal(
-        @RequestParam lat: Double,
-        @RequestParam lng: Double,
-        @RequestParam(defaultValue = "200") radiusMeters: Int,
-        @RequestParam(required = false) slotIndex: Int?,
-    ): ApiResponse<List<SegmentScoreInternalResponse>> =
-        ApiResponse.ok(service.findNearbyInternal(lat, lng, radiusMeters, slotIndex))
 }
 
 // ── DTOs ─────────────────────────────────────────────────────────────────────
@@ -67,27 +51,6 @@ data class SegmentScoreResponse(
     val coordinates: List<List<Double>>? = null,
     val components: ComponentScoresDto,
     /** Factor codes for this slot — `high_incident` is NEVER present. */
-    val factors: List<String>,
-    val slotIndex: Int,
-)
-
-/**
- * Internal/B2G response DTO — identical to [SegmentScoreResponse] but [factors] is UNFILTERED.
- * Includes `high_incident` and any other sensitive codes.
- * Must only be served via the /internal endpoint, never through the public gateway.
- */
-data class SegmentScoreInternalResponse(
-    val segmentId: String,
-    val wsiScore: Double,
-    val colorBand: String,
-    val startLat: Double,
-    val startLng: Double,
-    val endLat: Double,
-    val endLng: Double,
-    /** Full GeoJSON LineString coordinates in [longitude, latitude] order. */
-    val coordinates: List<List<Double>>? = null,
-    val components: ComponentScoresDto,
-    /** Full, unfiltered factor list — includes high_incident. */
     val factors: List<String>,
     val slotIndex: Int,
 )
