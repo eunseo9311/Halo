@@ -5,7 +5,11 @@
     "beta": {"risk": 0.42, "light": 0.31, "activity": 0.19, "safezone": 0.08},
     "tier_thresholds": [0.34, 0.67],
     "slot_count": 32,
-    "data_vintage": "DUMMY",
+    "data_vintage": {
+      "crime": "DUMMY",
+      "poi": "DUMMY",
+      "streetlight_outage": "DUMMY"
+    },
     "district_id": "DUMMY",
     "source_period": "DUMMY",
     "slots": [

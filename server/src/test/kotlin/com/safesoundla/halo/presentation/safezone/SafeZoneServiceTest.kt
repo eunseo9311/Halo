@@ -65,7 +65,7 @@ class SafeZoneServiceTest {
                     beta = BetaWeights(0.42, 0.31, 0.19, 0.08),
                     tierThresholds = TierThresholds(green = 0.67, yellow = 0.34),
                     slotCount = 32,
-                    dataVintage = "DUMMY",
+                    dataVintage = DataVintage.Dummy,
                     districtId = "REAL7KM",
                     sourcePeriod = "test",
                     slots = emptyList(),

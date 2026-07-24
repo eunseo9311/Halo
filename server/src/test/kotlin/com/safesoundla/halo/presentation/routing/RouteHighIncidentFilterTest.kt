@@ -76,7 +76,7 @@ class RouteHighIncidentFilterTest {
                     beta = BetaWeights(risk = 0.42, light = 0.31, activity = 0.19, safezone = 0.08),
                     tierThresholds = TierThresholds(green = 0.7, yellow = 0.4),
                     slotCount = 1,
-                    dataVintage = "test",
+                    dataVintage = DataVintage.Dummy,
                     districtId = "test",
                     sourcePeriod = "test",
                     slots          = slots,

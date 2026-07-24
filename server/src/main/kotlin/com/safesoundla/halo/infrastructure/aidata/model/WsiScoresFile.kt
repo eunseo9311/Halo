@@ -19,7 +19,7 @@ data class WsiMeta(
     val beta: BetaWeights,
     @JsonProperty("tier_thresholds") val tierThresholds: TierThresholds,
     @JsonProperty("slot_count") val slotCount: Int,
-    @JsonProperty("data_vintage") val dataVintage: String,
+    @JsonProperty("data_vintage") val dataVintage: DataVintage,
     @JsonProperty("district_id") val districtId: String,
     @JsonProperty("source_period") val sourcePeriod: String,
     val slots: List<SlotDefinition>,
@@ -31,6 +31,50 @@ data class BetaWeights(
     val activity: Double,
     val safezone: Double,
 )
+
+@JsonDeserialize(using = DataVintageDeserializer::class)
+sealed interface DataVintage {
+    data class Sources(
+        val crime: String,
+        val poi: String,
+        @JsonProperty("streetlight_outage") val streetlightOutage: String,
+    ) : DataVintage
+
+    data object Dummy : DataVintage
+}
+
+class DataVintageDeserializer : JsonDeserializer<DataVintage>() {
+    override fun deserialize(parser: JsonParser, context: DeserializationContext): DataVintage {
+        val node = parser.codec.readTree<JsonNode>(parser)
+        if (node.isTextual) {
+            if (node.textValue() == "DUMMY") return DataVintage.Dummy
+            return context.reportInputMismatch(
+                DataVintage::class.java,
+                "data_vintage string must be exactly \"DUMMY\"",
+            )
+        }
+        if (!node.isObject) {
+            return context.reportInputMismatch(
+                DataVintage::class.java,
+                "data_vintage must be an object or the string \"DUMMY\"",
+            )
+        }
+
+        val requiredFields = setOf("crime", "poi", "streetlight_outage")
+        val actualFields = node.fieldNames().asSequence().toSet()
+        if (actualFields != requiredFields || requiredFields.any { !node.get(it).isTextual }) {
+            return context.reportInputMismatch(
+                DataVintage::class.java,
+                "data_vintage object must contain exactly string fields: crime, poi, streetlight_outage",
+            )
+        }
+        return DataVintage.Sources(
+            crime = node.get("crime").textValue(),
+            poi = node.get("poi").textValue(),
+            streetlightOutage = node.get("streetlight_outage").textValue(),
+        )
+    }
+}
 
 @JsonDeserialize(using = TierThresholdsDeserializer::class)
 data class TierThresholds(

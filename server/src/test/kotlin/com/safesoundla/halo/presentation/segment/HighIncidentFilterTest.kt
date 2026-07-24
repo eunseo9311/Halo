@@ -72,7 +72,11 @@ class HighIncidentFilterTest {
         beta             = BetaWeights(risk = 0.42, light = 0.31, activity = 0.19, safezone = 0.08),
         tierThresholds   = TierThresholds(green = 0.7, yellow = 0.4),
         slotCount        = 1,
-        dataVintage      = "TEST",
+        dataVintage      = DataVintage.Sources(
+            crime = "PRIVATE_CRIME_VINTAGE",
+            poi = "PRIVATE_POI_VINTAGE",
+            streetlightOutage = "PRIVATE_OUTAGE_VINTAGE",
+        ),
         districtId       = "test",
         sourcePeriod     = "test",
         slots            = slots,
@@ -117,7 +121,9 @@ class HighIncidentFilterTest {
             .registerModule(KotlinModule.Builder().build())
             .writeValueAsString(responses)
         assertFalse(json.contains("high_incident"))
-        assertFalse(json.contains("DUMMY"))
+        assertFalse(json.contains("PRIVATE_CRIME_VINTAGE"))
+        assertFalse(json.contains("PRIVATE_POI_VINTAGE"))
+        assertFalse(json.contains("PRIVATE_OUTAGE_VINTAGE"))
         assertFalse(json.contains("REAL7KM"))
     }
 

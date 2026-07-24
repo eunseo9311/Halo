@@ -3,6 +3,7 @@ package com.safesoundla.halo.infrastructure.aidata
 import com.fasterxml.jackson.databind.ObjectMapper
 import com.fasterxml.jackson.module.kotlin.KotlinModule
 import com.fasterxml.jackson.module.kotlin.readValue
+import com.safesoundla.halo.infrastructure.aidata.model.DataVintage
 import com.safesoundla.halo.infrastructure.aidata.model.SegmentProperties
 import com.safesoundla.halo.infrastructure.aidata.model.TierCode
 import org.junit.jupiter.api.Test
@@ -19,6 +20,37 @@ class AiDataLoaderTest {
     lateinit var tempDir: Path
 
     private val mapper = ObjectMapper().registerModule(KotlinModule.Builder().build())
+
+    @Test
+    fun `data_vintage parses exact object and legacy DUMMY sentinel`() {
+        assertEquals(
+            DataVintage.Sources(
+                crime = "2026-01",
+                poi = "2026-02",
+                streetlightOutage = "2026-03",
+            ),
+            mapper.readValue<DataVintage>(resourceText("ai-data/data-vintage/actual.json")),
+        )
+        assertEquals(
+            DataVintage.Dummy,
+            mapper.readValue<DataVintage>(resourceText("ai-data/data-vintage/legacy-dummy.json")),
+        )
+    }
+
+    @Test
+    fun `data_vintage rejects non-DUMMY strings and malformed objects`() {
+        listOf(
+            "invalid-string.json",
+            "missing-field.json",
+            "wrong-type.json",
+            "extra-field.json",
+            "invalid-shape.json",
+        ).forEach { fixture ->
+            assertFailsWith<Exception>(fixture) {
+                mapper.readValue<DataVintage>(resourceText("ai-data/data-vintage/$fixture"))
+            }
+        }
+    }
 
     @Test
     fun `loads the committed 32-slot fixture and builds a directed Long graph`() {
