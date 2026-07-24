@@ -4,6 +4,7 @@ import jakarta.validation.constraints.DecimalMax
 import jakarta.validation.constraints.DecimalMin
 import jakarta.validation.constraints.Max
 import jakarta.validation.constraints.Min
+import java.time.OffsetDateTime
 
 data class RouteRequest(
     @field:DecimalMin("-90.0") @field:DecimalMax("90.0")
@@ -29,8 +30,14 @@ data class RouteRequest(
     /**
      * Optional hour (0–23) for slot resolution.
      * Defaults to current LA local time hour when absent.
-     * Ignored if [dayOfWeek] is also absent (current time used for both).
+     * When supplied without [dayOfWeek], the current LA day is used.
      */
     @field:Min(0) @field:Max(23)
     val hour: Int? = null,
+
+    /**
+     * Optional ISO-8601 departure instant. It is converted to Los Angeles local time
+     * before slot lookup. Do not combine this with the legacy [dayOfWeek]/[hour] fields.
+     */
+    val departureTime: OffsetDateTime? = null,
 )

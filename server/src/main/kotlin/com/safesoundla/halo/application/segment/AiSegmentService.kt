@@ -17,6 +17,7 @@ import kotlin.math.PI
 private const val METERS_PER_DEGREE_LAT = 111_000.0
 private const val MAX_SEGMENTS_PER_RESPONSE = 200
 private const val HIGH_INCIDENT_FACTOR = "high_incident"
+private val PUBLIC_FACTORS = setOf("low_light", "outage_reported", "low_activity", "no_safezone")
 private val LA_ZONE = ZoneId.of("America/Los_Angeles")
 
 @Service
@@ -76,16 +77,17 @@ class AiSegmentService(
         slotIndex: Int,
     ) = SegmentScoreResponse(
         segmentId  = seg.properties.segmentId,
-        wsiScore   = score.wsi.getOrElse(slotIndex) { 0.0 },
-        colorBand  = score.tier.getOrElse(slotIndex) { "RED" },
+        wsiScore   = score.wsi.requiredAt(slotIndex, "wsi"),
+        colorBand  = score.tier.requiredAt(slotIndex, "tier").name,
         startLat   = seg.startLat,
         startLng   = seg.startLng,
         endLat     = seg.endLat,
         endLng     = seg.endLng,
+        coordinates = seg.geometry.coordinates,
         components = toComponentsDto(score, slotIndex),
-        // ↓ HIGH_INCIDENT stripped here — explicit, intentional, tested
-        factors    = score.factors.getOrElse(slotIndex) { emptyList() }
-                         .filter { it != HIGH_INCIDENT_FACTOR },
+        // Defence in depth: only explicitly public factor codes cross this DTO.
+        factors    = score.factors.requiredAt(slotIndex, "factors")
+                         .filter { it in PUBLIC_FACTORS },
         slotIndex  = slotIndex,
     )
 
@@ -96,21 +98,23 @@ class AiSegmentService(
         slotIndex: Int,
     ) = SegmentScoreInternalResponse(
         segmentId  = seg.properties.segmentId,
-        wsiScore   = score.wsi.getOrElse(slotIndex) { 0.0 },
-        colorBand  = score.tier.getOrElse(slotIndex) { "RED" },
+        wsiScore   = score.wsi.requiredAt(slotIndex, "wsi"),
+        colorBand  = score.tier.requiredAt(slotIndex, "tier").name,
         startLat   = seg.startLat,
         startLng   = seg.startLng,
         endLat     = seg.endLat,
         endLng     = seg.endLng,
+        coordinates = seg.geometry.coordinates,
         components = toComponentsDto(score, slotIndex),
-        factors    = score.factors.getOrElse(slotIndex) { emptyList() },
+        factors    = score.factors.requiredAt(slotIndex, "factors"),
         slotIndex  = slotIndex,
     )
 
     private fun toComponentsDto(score: WsiScoreEntry, slotIndex: Int) = ComponentScoresDto(
-        risk    = score.components.risk.getOrElse(slotIndex) { 0.0 },
-        light   = score.components.light.getOrElse(slotIndex) { 0.0 },
-        comfort = score.components.comfort.getOrElse(slotIndex) { 0.0 },
+        risk     = score.components.risk.requiredAt(slotIndex, "components.risk"),
+        light    = score.components.light.requiredAt(slotIndex, "components.light"),
+        activity = score.components.activity.requiredAt(slotIndex, "components.activity"),
+        safezone = score.components.safezone.requiredAt(slotIndex, "components.safezone"),
     )
 
     // ── Bounding-box filter ───────────────────────────────────────────────────
@@ -132,8 +136,10 @@ class AiSegmentService(
             .filter { seg ->
                 seg.startLat in minLat..maxLat && seg.startLng in minLng..maxLng
             }
-            .mapNotNull { seg ->
-                val score = snapshot.scores[seg.properties.segmentId] ?: return@mapNotNull null
+            .map { seg ->
+                val score = requireNotNull(snapshot.scores[seg.properties.segmentId]) {
+                    "Missing WSI score for segment '${seg.properties.segmentId}'"
+                }
                 seg to score
             }
             .take(MAX_SEGMENTS_PER_RESPONSE)
@@ -150,11 +156,13 @@ class AiSegmentService(
      */
     private fun currentSlotIndex(snapshot: AiDataSnapshot): Int {
         val now = ZonedDateTime.now(LA_ZONE)
-        return findSlotIndex(snapshot.meta.slots, now.dayOfWeek, now.hour) ?: run {
-            // Fallback: use slot 0 and log — this should not happen with well-formed meta.
-            org.slf4j.LoggerFactory.getLogger(AiSegmentService::class.java)
-                .warn("[AI-DATA] No slot found for dayOfWeek=${now.dayOfWeek} hour=${now.hour} — defaulting to slot 0")
-            0
+        return requireNotNull(findSlotIndex(snapshot.meta.slots, now.dayOfWeek, now.hour)) {
+            "No AI slot matches current America/Los_Angeles time"
         }
     }
+}
+
+private fun <T> List<T>.requiredAt(slotIndex: Int, field: String): T {
+    require(slotIndex in indices) { "$field has no value for slotIndex=$slotIndex" }
+    return this[slotIndex]
 }

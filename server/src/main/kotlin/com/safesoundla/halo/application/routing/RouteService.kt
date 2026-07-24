@@ -6,6 +6,7 @@ import com.safesoundla.halo.infrastructure.aidata.AiDataStore
 import com.safesoundla.halo.infrastructure.aidata.RouteGraph
 import com.safesoundla.halo.infrastructure.config.RoutingProperties
 import com.safesoundla.halo.presentation.routing.RouteInfo
+import com.safesoundla.halo.presentation.routing.RouteCoordinateDto
 import com.safesoundla.halo.presentation.routing.RouteRequest
 import com.safesoundla.halo.presentation.routing.RouteResponse
 import com.safesoundla.halo.presentation.routing.RouteSegmentDto
@@ -14,14 +15,13 @@ import org.jgrapht.alg.interfaces.AStarAdmissibleHeuristic
 import org.jgrapht.alg.shortestpath.AStarShortestPath
 import org.jgrapht.graph.AsWeightedGraph
 import org.jgrapht.graph.DefaultWeightedEdge
-import org.slf4j.LoggerFactory
 import org.springframework.stereotype.Service
 import java.time.DayOfWeek
 import java.time.ZoneId
 import java.time.ZonedDateTime
 import kotlin.math.*
 
-private const val HIGH_INCIDENT_FACTOR = "high_incident"
+private val PUBLIC_FACTORS = setOf("low_light", "outage_reported", "low_activity", "no_safezone")
 private val LA_ZONE = ZoneId.of("America/Los_Angeles")
 
 @Service
@@ -29,11 +29,10 @@ class RouteService(
     private val store: AiDataStore,
     private val routingProps: RoutingProperties,
 ) {
-    private val log = LoggerFactory.getLogger(RouteService::class.java)
-
     fun findRoutes(request: RouteRequest): RouteResponse {
         val snapshot   = store.get()
-        val slotIndex  = resolveSlotIndex(snapshot, request.dayOfWeek, request.hour)
+        val departure = resolveDeparture(request)
+        val slotIndex = resolveSlotIndex(snapshot, departure)
         val rg         = snapshot.routeGraph
 
         val fromNode = nearestNode(rg, request.fromLat, request.fromLng)
@@ -48,18 +47,25 @@ class RouteService(
         }
 
         // A* Euclidean heuristic using pre-computed node coordinates
-        val heuristic = AStarAdmissibleHeuristic<String> { u, t ->
+        val heuristic = AStarAdmissibleHeuristic<Long> { u, t ->
             val uC = rg.nodeCoords[u] ?: return@AStarAdmissibleHeuristic 0.0
             val tC = rg.nodeCoords[t] ?: return@AStarAdmissibleHeuristic 0.0
             haversineMeters(uC[0], uC[1], tC[0], tC[1])
         }
 
-        // Safest route: pre-compute WSI-weighted costs for this slot (O(E), negligible),
-        // then pass as a Map to AsWeightedGraph (JGraphT 1.5.x only has Map constructor).
+        // Safest route: pre-compute WSI-weighted costs for this slot, then pass them
+        // to AsWeightedGraph. This is intentionally unconstrained: enforcing a 30%
+        // distance budget requires a resource-constrained label-setting algorithm,
+        // not a post-hoc truncation of this A* result.
         val safetyWeights: Map<DefaultWeightedEdge, Double> =
             rg.edgeToSegmentId.mapValues { (edge, segId) ->
                 val length = rg.graph.getEdgeWeight(edge)
-                val wsi    = snapshot.scores[segId]?.wsi?.getOrNull(slotIndex) ?: 0.5
+                val score = checkNotNull(snapshot.scores[segId]) {
+                    "Routing segment '$segId' has no joined WSI score"
+                }
+                val wsi = checkNotNull(score.wsi.getOrNull(slotIndex)) {
+                    "Routing segment '$segId' has no WSI value for slot $slotIndex"
+                }
                 length * (1.0 + (1.0 - wsi) * routingProps.safetyWeight)
             }
         val safetyWeighted = AsWeightedGraph(rg.graph, safetyWeights)
@@ -73,34 +79,53 @@ class RouteService(
         return RouteResponse(
             safestRoute   = toRouteInfo(safestPath, snapshot, slotIndex, rg),
             shortestRoute = toRouteInfo(shortestPath, snapshot, slotIndex, rg),
+            slotIndex = slotIndex,
+            departureTime = departure.toString(),
         )
     }
 
     // ── Path → DTO ────────────────────────────────────────────────────────────
 
     private fun toRouteInfo(
-        path: GraphPath<String, DefaultWeightedEdge>,
+        path: GraphPath<Long, DefaultWeightedEdge>,
         snapshot: AiDataSnapshot,
         slotIndex: Int,
         rg: RouteGraph,
     ): RouteInfo {
-        val dtos = path.edgeList.mapNotNull { edge ->
-            val segId = rg.edgeToSegmentId[edge] ?: return@mapNotNull null
-            val seg   = snapshot.segments[segId]   ?: return@mapNotNull null
-            val score = snapshot.scores[segId]
+        val dtos = path.edgeList.map { edge ->
+            val segId = checkNotNull(rg.edgeToSegmentId[edge]) {
+                "Routing edge is missing its segment ID"
+            }
+            val seg = checkNotNull(snapshot.segments[segId]) {
+                "Routing segment '$segId' is missing from the loaded snapshot"
+            }
+            val score = checkNotNull(snapshot.scores[segId]) {
+                "Routing segment '$segId' has no joined WSI score"
+            }
+            val wsi = checkNotNull(score.wsi.getOrNull(slotIndex)) {
+                "Routing segment '$segId' has no WSI value for slot $slotIndex"
+            }
+            val factors = checkNotNull(score.factors.getOrNull(slotIndex)) {
+                "Routing segment '$segId' has no factor list for slot $slotIndex"
+            }
+            val tier = checkNotNull(score.tier.getOrNull(slotIndex)) {
+                "Routing segment '$segId' has no tier code for slot $slotIndex"
+            }
             RouteSegmentDto(
                 segmentId = segId,
                 startLat  = seg.startLat,
                 startLng  = seg.startLng,
                 endLat    = seg.endLat,
                 endLng    = seg.endLng,
+                coordinates = seg.geometry.coordinates.map { coordinate ->
+                    RouteCoordinateDto(latitude = coordinate[1], longitude = coordinate[0])
+                },
                 lengthM   = seg.properties.lengthM,
-                wsiScore  = score?.wsi?.getOrNull(slotIndex),
-                colorBand = score?.tier?.getOrNull(slotIndex),
-                // high_incident filtered here — same rule as public segments API
-                factors   = score?.factors?.getOrNull(slotIndex)
-                                ?.filter { it != HIGH_INCIDENT_FACTOR }
-                            ?: emptyList(),
+                wsiScore  = wsi,
+                colorBand = tier.name,
+                slotIndex = slotIndex,
+                // Defence in depth: sensitive and unknown codes never cross the public DTO.
+                factors   = factors.filter { it in PUBLIC_FACTORS },
             )
         }
         val wsiValues = dtos.mapNotNull { it.wsiScore }
@@ -119,8 +144,8 @@ class RouteService(
      * Uses squared Euclidean distance in degree-space (no sqrt, no haversine needed for
      * comparison-only nearest-neighbour search over short urban distances).
      */
-    private fun nearestNode(rg: RouteGraph, lat: Double, lng: Double): String? {
-        var bestId   : String? = null
+    private fun nearestNode(rg: RouteGraph, lat: Double, lng: Double): Long? {
+        var bestId: Long? = null
         var bestDist           = Double.MAX_VALUE
         for ((id, coords) in rg.nodeCoords) {
             val dLat = coords[0] - lat
@@ -133,17 +158,28 @@ class RouteService(
 
     // ── Slot resolution ───────────────────────────────────────────────────────
 
+    private fun resolveDeparture(request: RouteRequest): ZonedDateTime {
+        require(request.departureTime == null || (request.dayOfWeek == null && request.hour == null)) {
+            "departureTime cannot be combined with dayOfWeek or hour"
+        }
+        request.departureTime?.let { return it.atZoneSameInstant(LA_ZONE) }
+
+        val now = ZonedDateTime.now(LA_ZONE)
+        val day = request.dayOfWeek?.let(::parseDayOfWeek) ?: now.dayOfWeek
+        val hour = request.hour ?: now.hour
+        return now.with(java.time.temporal.TemporalAdjusters.previousOrSame(day))
+            .withHour(hour)
+            .withMinute(0)
+            .withSecond(0)
+            .withNano(0)
+    }
+
     private fun resolveSlotIndex(
         snapshot: AiDataSnapshot,
-        dayOfWeekParam: String?,
-        hourParam: Int?,
+        departure: ZonedDateTime,
     ): Int {
-        val now  = ZonedDateTime.now(LA_ZONE)
-        val dow  = if (dayOfWeekParam != null) parseDayOfWeek(dayOfWeekParam) else now.dayOfWeek
-        val hour = hourParam ?: now.hour
-        return findSlotIndex(snapshot.meta.slots, dow, hour) ?: run {
-            log.warn("[ROUTE] No slot matched for dow={} hour={} — defaulting to slot 0", dow, hour)
-            0
+        return requireNotNull(findSlotIndex(snapshot.meta.slots, departure.dayOfWeek, departure.hour)) {
+            "No AI slot matches LA departure time dayOfWeek=${departure.dayOfWeek} hour=${departure.hour}"
         }
     }
 
@@ -155,10 +191,7 @@ class RouteService(
         "fri", "friday"    -> DayOfWeek.FRIDAY
         "sat", "saturday"  -> DayOfWeek.SATURDAY
         "sun", "sunday"    -> DayOfWeek.SUNDAY
-        else               -> {
-            log.warn("[ROUTE] Unrecognised dayOfWeek='{}' — using current LA day", value)
-            ZonedDateTime.now(LA_ZONE).dayOfWeek
-        }
+        else -> throw IllegalArgumentException("Unrecognised dayOfWeek='$value'")
     }
 }
 

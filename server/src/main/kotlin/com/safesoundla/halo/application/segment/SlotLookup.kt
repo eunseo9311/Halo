@@ -31,11 +31,15 @@ fun findSlotIndex(slots: List<SlotDefinition>, dayOfWeek: DayOfWeek, hour: Int):
 /**
  * Maps a Java [DayOfWeek] to the AI team's dow_group label.
  *
- * Current contract: "weekday" | "saturday" | "sunday".
+ * Current contract: "weekday" (Monday–Thursday) | "fri" | "sat" | "sun".
  * Change only this function if the AI team redefines the groupings.
  */
 fun dowGroupOf(dayOfWeek: DayOfWeek): String = when (dayOfWeek) {
-    DayOfWeek.SATURDAY -> "saturday"
-    DayOfWeek.SUNDAY   -> "sunday"
-    else               -> "weekday"
+    DayOfWeek.MONDAY,
+    DayOfWeek.TUESDAY,
+    DayOfWeek.WEDNESDAY,
+    DayOfWeek.THURSDAY -> "weekday"
+    DayOfWeek.FRIDAY   -> "fri"
+    DayOfWeek.SATURDAY -> "sat"
+    DayOfWeek.SUNDAY   -> "sun"
 }

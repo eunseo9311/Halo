@@ -1,32 +1,12 @@
 {
   "type": "FeatureCollection",
-  "_comment": "PLACEHOLDER — AI team will replace. 'school' category has 0 entries (no data).",
   "features": [
-    {
-      "type": "Feature",
-      "geometry": {
-        "type": "Point",
-        "coordinates": [-118.2432, 34.0525]
-      },
-      "properties": {
-        "safezone_id": "sz_001",
-        "name": "LAPD Central Division",
-        "category": "police_station",
-        "nearby_segments": ["111_222_0", "222_333_0"]
-      }
-    },
-    {
-      "type": "Feature",
-      "geometry": {
-        "type": "Point",
-        "coordinates": [-118.2440, 34.0510]
-      },
-      "properties": {
-        "safezone_id": "sz_002",
-        "name": "LA Fire Station 9",
-        "category": "fire_station",
-        "nearby_segments": ["111_222_0"]
-      }
-    }
+    {"type":"Feature","geometry":{"type":"Point","coordinates":[-118.2435,34.0524]},"properties":{"poi_id":"poi_police","name":"Police","category":"police","open_24h":true,"nearby_segments":["111_222_0"]}},
+    {"type":"Feature","geometry":{"type":"Point","coordinates":[-118.2431,34.0527]},"properties":{"poi_id":"poi_fire","name":"Fire Station","category":"fire_station","open_24h":true,"nearby_segments":["111_222_0","222_333_0"]}},
+    {"type":"Feature","geometry":{"type":"Point","coordinates":[-118.2428,34.0530]},"properties":{"poi_id":"poi_school","name":"School","category":"school","open_24h":false,"nearby_segments":["222_333_0"]}},
+    {"type":"Feature","geometry":{"type":"Point","coordinates":[-118.2425,34.0533]},"properties":{"poi_id":"poi_hospital","name":"Hospital ER","category":"hospital_er","open_24h":true,"nearby_segments":["222_333_0"]}},
+    {"type":"Feature","geometry":{"type":"Point","coordinates":[-118.2421,34.0536]},"properties":{"poi_id":"poi_store","name":"24-hour Store","category":"convenience_24h","open_24h":true,"nearby_segments":["333_3000000000_0"]}},
+    {"type":"Feature","geometry":{"type":"Point","coordinates":[-118.2418,34.0539]},"properties":{"poi_id":"poi_gas","name":"Gas Station","category":"gas_station","open_24h":true,"nearby_segments":["333_3000000000_0"]}},
+    {"type":"Feature","geometry":{"type":"Point","coordinates":[-118.2414,34.0542]},"properties":{"poi_id":"poi_transit","name":"Transit Station","category":"transit_station","open_24h":false,"nearby_segments":[]}}
   ]
 }

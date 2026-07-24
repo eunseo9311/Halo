@@ -7,9 +7,11 @@ import com.safesoundla.halo.infrastructure.aidata.RouteGraph
 import com.safesoundla.halo.infrastructure.aidata.model.*
 import com.safesoundla.halo.infrastructure.config.RoutingProperties
 import org.jgrapht.graph.DefaultWeightedEdge
-import org.jgrapht.graph.WeightedMultigraph
+import org.jgrapht.graph.DirectedWeightedMultigraph
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
+import org.junit.jupiter.api.assertThrows
+import java.time.OffsetDateTime
 import kotlin.test.assertEquals
 import kotlin.test.assertFalse
 import kotlin.test.assertTrue
@@ -33,28 +35,28 @@ class RouteHighIncidentFilterTest {
     // ── Fixture ───────────────────────────────────────────────────────────────
 
     private val slots = listOf(
-        SlotDefinition(index = 0, dowGroup = "weekday", hourStart = 0, hourEnd = 24, label = "all_day"),
+        SlotDefinition(index = 0, dowGroup = "weekday", hourStart = 0, hourEnd = 24),
     )
 
     //  A=(34.0520, -118.2440)  B=(34.0525, -118.2430)  C=(34.0530, -118.2420)
     private val segAb = buildSeg(
-        segId = "A_B_0", from = "A", to = "B",
+        segId = "A_B_0", from = 1L, to = 2L,
         sLat = 34.0520, sLng = -118.2440, eLat = 34.0525, eLng = -118.2430,
         lengthM = 110.0, wsi = 0.8,
-        factors = listOf("well_lit", "high_incident"),
+        factors = listOf("low_light", "high_incident"),
     )
     private val segBc = buildSeg(
-        segId = "B_C_0", from = "B", to = "C",
+        segId = "B_C_0", from = 2L, to = 3L,
         sLat = 34.0525, sLng = -118.2430, eLat = 34.0530, eLng = -118.2420,
         lengthM = 120.0, wsi = 0.7,
-        factors = listOf("high_incident", "low_traffic"),
+        factors = listOf("high_incident", "low_activity"),
     )
 
     @BeforeEach
     fun setUp() {
-        val graph       = WeightedMultigraph<String, DefaultWeightedEdge>(DefaultWeightedEdge::class.java)
+        val graph = DirectedWeightedMultigraph<Long, DefaultWeightedEdge>(DefaultWeightedEdge::class.java)
         val edgeToSegId = HashMap<DefaultWeightedEdge, String>()
-        val nodeCoords  = HashMap<String, DoubleArray>()
+        val nodeCoords = HashMap<Long, DoubleArray>()
 
         listOf(segAb, segBc).forEach { s ->
             graph.addVertex(s.nodeA); graph.addVertex(s.nodeB)
@@ -71,8 +73,12 @@ class RouteHighIncidentFilterTest {
                 meta = WsiMeta(
                     wsiVersion     = "test",
                     modelVersion   = "v0",
-                    beta           = BetaWeights(risk = 0.5, light = 0.3, comfort = 0.2),
+                    beta = BetaWeights(risk = 0.42, light = 0.31, activity = 0.19, safezone = 0.08),
                     tierThresholds = TierThresholds(green = 0.7, yellow = 0.4),
+                    slotCount = 1,
+                    dataVintage = "test",
+                    districtId = "test",
+                    sourcePeriod = "test",
                     slots          = slots,
                 ),
                 segments   = mapOf(segAb.segId to segAb.feature, segBc.segId to segBc.feature),
@@ -112,8 +118,8 @@ class RouteHighIncidentFilterTest {
     fun `other factors are preserved after filtering`() {
         val response   = service.findRoutes(fromAtoC())
         val allFactors = response.safestRoute.segments.flatMap { it.factors }
-        assertTrue(allFactors.contains("well_lit"),    "well_lit must be retained in safest route")
-        assertTrue(allFactors.contains("low_traffic"), "low_traffic must be retained in safest route")
+        assertTrue(allFactors.contains("low_light"), "low_light must be retained in safest route")
+        assertTrue(allFactors.contains("low_activity"), "low_activity must be retained in safest route")
     }
 
     @Test
@@ -132,15 +138,63 @@ class RouteHighIncidentFilterTest {
         assertTrue(avgWsi != null && avgWsi > 0.0, "avgWsi should be populated")
     }
 
+    @Test
+    fun `response exposes resolved slot departure time and full coordinates`() {
+        val response = service.findRoutes(fromAtoC())
+
+        assertEquals(0, response.slotIndex)
+        assertEquals("2026-07-20T12:00-07:00[America/Los_Angeles]", response.departureTime)
+        assertEquals(2, response.safestRoute.segments.first().coordinates?.size)
+        assertEquals("GREEN", response.safestRoute.segments.first().colorBand)
+        assertEquals(0, response.safestRoute.segments.first().slotIndex)
+    }
+
+    @Test
+    fun `departure timestamps use LA daylight and standard offsets`() {
+        val summer = service.findRoutes(
+            fromAtoC().copy(departureTime = OffsetDateTime.parse("2026-07-20T19:00:00Z")),
+        )
+        val winter = service.findRoutes(
+            fromAtoC().copy(departureTime = OffsetDateTime.parse("2026-01-19T20:00:00Z")),
+        )
+
+        assertTrue(summer.departureTime!!.contains("-07:00[America/Los_Angeles]"))
+        assertTrue(winter.departureTime!!.contains("-08:00[America/Los_Angeles]"))
+    }
+
+    @Test
+    fun `unknown day is rejected instead of silently using current LA day`() {
+        assertThrows<IllegalArgumentException> {
+            service.findRoutes(fromAtoC().copy(departureTime = null, dayOfWeek = "holiday", hour = 12))
+        }
+    }
+
+    @Test
+    fun `departure timestamp cannot be combined with legacy slot fields`() {
+        assertThrows<IllegalArgumentException> {
+            service.findRoutes(fromAtoC().copy(hour = 12))
+        }
+    }
+
+    @Test
+    fun `missing slot WSI is rejected instead of using a neutral score`() {
+        val broken = segAb.score.copy(wsi = emptyList())
+        val snapshot = store.get()
+        store.set(snapshot.copy(scores = snapshot.scores + (segAb.segId to broken)))
+
+        assertThrows<IllegalStateException> { service.findRoutes(fromAtoC()) }
+    }
+
     // ── Helpers ───────────────────────────────────────────────────────────────
 
     private fun fromAtoC() = RouteRequest(
         fromLat = 34.0520, fromLng = -118.2440,
         toLat   = 34.0530, toLng   = -118.2420,
+        departureTime = OffsetDateTime.parse("2026-07-20T12:00:00-07:00"),
     )
 
     private data class SegData(
-        val segId: String, val nodeA: String, val nodeB: String,
+        val segId: String, val nodeA: Long, val nodeB: Long,
         val sLat: Double, val sLng: Double, val eLat: Double, val eLng: Double,
         val lengthM: Double,
         val feature: SegmentFeature,
@@ -148,7 +202,7 @@ class RouteHighIncidentFilterTest {
     )
 
     private fun buildSeg(
-        segId: String, from: String, to: String,
+        segId: String, from: Long, to: Long,
         sLat: Double, sLng: Double, eLat: Double, eLng: Double,
         lengthM: Double, wsi: Double, factors: List<String>,
     ) = SegData(
@@ -167,12 +221,18 @@ class RouteHighIncidentFilterTest {
                 lengthM    = lengthM,
                 districtId = null,
                 subareaId  = null,
+                streetName = emptyList(),
             ),
         ),
         score = WsiScoreEntry(
             wsi        = listOf(wsi),
-            tier       = listOf(if (wsi >= 0.7) "GREEN" else if (wsi >= 0.4) "YELLOW" else "RED"),
-            components = ComponentScores(risk = listOf(0.5), light = listOf(0.5), comfort = listOf(0.5)),
+            tier = listOf(TierCode.GREEN),
+            components = ComponentScores(
+                risk = listOf(0.5),
+                light = listOf(0.5),
+                activity = listOf(0.5),
+                safezone = listOf(0.5),
+            ),
             factors    = listOf(factors),
         ),
     )

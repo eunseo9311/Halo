@@ -5,7 +5,8 @@ import org.springframework.boot.context.properties.ConfigurationProperties
 /**
  * File paths for the three AI-generated data files.
  *
- * Prefix with "classpath:" to load from the JAR (default, for committed placeholder/prod files).
+ * Prefix with "classpath:" to load the committed contract fixtures used for development/tests.
+ * Those small files are not production AI data. Production-scale data must use external paths.
  * Prefix with "file:" or use a bare filesystem path for externally mounted files.
  *
  * Configured via application.yml under `halo.ai-data`.

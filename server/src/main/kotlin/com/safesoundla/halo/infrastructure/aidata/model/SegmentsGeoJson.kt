@@ -1,6 +1,11 @@
 package com.safesoundla.halo.infrastructure.aidata.model
 
+import com.fasterxml.jackson.core.JsonParser
+import com.fasterxml.jackson.databind.DeserializationContext
+import com.fasterxml.jackson.databind.JsonDeserializer
+import com.fasterxml.jackson.databind.JsonNode
 import com.fasterxml.jackson.annotation.JsonProperty
+import com.fasterxml.jackson.databind.annotation.JsonDeserialize
 
 /** Root object of segments.geojson */
 data class SegmentsGeoJson(
@@ -34,8 +39,27 @@ data class LineStringGeometry(
 
 data class SegmentProperties(
     @JsonProperty("segment_id")  val segmentId: String,
-    val connects: List<String>,
+    val connects: List<Long>,
     @JsonProperty("length_m")    val lengthM: Double,
     @JsonProperty("district_id") val districtId: String?,
     @JsonProperty("subarea_id")  val subareaId: String?,
+    @JsonProperty("street_name")
+    @JsonDeserialize(using = StreetNamesDeserializer::class)
+    val streetName: List<String>,
 )
+
+class StreetNamesDeserializer : JsonDeserializer<List<String>>() {
+    override fun deserialize(parser: JsonParser, context: DeserializationContext): List<String> {
+        val node = parser.codec.readTree<JsonNode>(parser)
+        return when {
+            node.isTextual -> listOf(node.textValue())
+            node.isArray && node.all(JsonNode::isTextual) -> node.map(JsonNode::textValue)
+            else -> context.reportInputMismatch(
+                List::class.java,
+                "street_name must be null, a string, or an array of strings",
+            )
+        }
+    }
+
+    override fun getNullValue(context: DeserializationContext): List<String> = emptyList()
+}

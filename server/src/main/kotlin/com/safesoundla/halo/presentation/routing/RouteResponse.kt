@@ -5,6 +5,10 @@ data class RouteResponse(
     val safestRoute: RouteInfo,
     /** A* route minimising physical distance only. */
     val shortestRoute: RouteInfo,
+    /** AI slot used consistently for both routes. */
+    val slotIndex: Int? = null,
+    /** ISO-8601 departure time in the America/Los_Angeles zone. */
+    val departureTime: String? = null,
 )
 
 data class RouteInfo(
@@ -21,6 +25,11 @@ data class RouteSegmentDto(
     val startLng: Double,
     val endLat: Double,
     val endLng: Double,
+    /**
+     * Full directed LineString geometry in path order. Start/end fields remain for
+     * backward compatibility.
+     */
+    val coordinates: List<RouteCoordinateDto>? = null,
     val lengthM: Double,
     /** WSI score for the resolved time slot (0.0–1.0); null if no score data. */
     val wsiScore: Double?,
@@ -31,4 +40,11 @@ data class RouteSegmentDto(
      * `high_incident` is NEVER present — filtered server-side before serialisation.
      */
     val factors: List<String>,
+    /** Slot used for this segment; optional for backward-compatible deserializers. */
+    val slotIndex: Int? = null,
+)
+
+data class RouteCoordinateDto(
+    val latitude: Double,
+    val longitude: Double,
 )

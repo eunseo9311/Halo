@@ -63,6 +63,8 @@ data class SegmentScoreResponse(
     val startLng: Double,
     val endLat: Double,
     val endLng: Double,
+    /** Full GeoJSON LineString coordinates in [longitude, latitude] order. */
+    val coordinates: List<List<Double>>? = null,
     val components: ComponentScoresDto,
     /** Factor codes for this slot — `high_incident` is NEVER present. */
     val factors: List<String>,
@@ -82,6 +84,8 @@ data class SegmentScoreInternalResponse(
     val startLng: Double,
     val endLat: Double,
     val endLng: Double,
+    /** Full GeoJSON LineString coordinates in [longitude, latitude] order. */
+    val coordinates: List<List<Double>>? = null,
     val components: ComponentScoresDto,
     /** Full, unfiltered factor list — includes high_incident. */
     val factors: List<String>,
@@ -91,5 +95,6 @@ data class SegmentScoreInternalResponse(
 data class ComponentScoresDto(
     val risk: Double,
     val light: Double,
-    val comfort: Double,
+    val activity: Double,
+    val safezone: Double,
 )

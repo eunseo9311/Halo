@@ -19,8 +19,13 @@ class RouteController(private val routeService: RouteService) {
      * - **safestRoute**: edge cost = `length_m × (1 + (1 − wsi[slot]) × safetyWeight)`
      * - **shortestRoute**: edge cost = `length_m` (pure physical distance)
      *
-     * The time slot is resolved from the optional [dayOfWeek]/[hour] request fields,
-     * or from the current LA local time if both are absent.
+     * The time slot is resolved from [RouteRequest.departureTime], the legacy
+     * [RouteRequest.dayOfWeek]/[RouteRequest.hour] fields, or current LA local time.
+     * Invalid or unmatched values are rejected; routing never substitutes slot 0.
+     *
+     * The safest path currently minimises the safety-weighted cost without a distance
+     * detour constraint. A 30% cap requires a resource-constrained shortest-path
+     * implementation and is intentionally not claimed by this endpoint.
      *
      * `high_incident` is never present in response segment factors.
      */
