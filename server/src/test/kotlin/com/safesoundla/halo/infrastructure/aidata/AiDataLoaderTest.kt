@@ -7,13 +7,17 @@ import com.safesoundla.halo.infrastructure.aidata.model.DataVintage
 import com.safesoundla.halo.infrastructure.aidata.model.SegmentProperties
 import com.safesoundla.halo.infrastructure.aidata.model.TierCode
 import org.junit.jupiter.api.Test
+import org.junit.jupiter.api.extension.ExtendWith
 import org.junit.jupiter.api.io.TempDir
+import org.springframework.boot.test.system.CapturedOutput
+import org.springframework.boot.test.system.OutputCaptureExtension
 import java.nio.file.Files
 import java.nio.file.Path
 import kotlin.test.assertEquals
 import kotlin.test.assertFailsWith
 import kotlin.test.assertTrue
 
+@ExtendWith(OutputCaptureExtension::class)
 class AiDataLoaderTest {
 
     @TempDir
@@ -53,7 +57,7 @@ class AiDataLoaderTest {
     }
 
     @Test
-    fun `loads the committed 32-slot fixture and builds a directed Long graph`() {
+    fun `loads the committed 32-slot fixture and builds a directed Long graph`(output: CapturedOutput) {
         val snapshot = loader().load()
 
         assertEquals(setOf(TierCode.RED, TierCode.YELLOW, TierCode.GREEN),
@@ -68,6 +72,18 @@ class AiDataLoaderTest {
         assertTrue(snapshot.routeGraph.graph.containsVertex(3_000_000_000L))
         assertEquals(snapshot.segments.keys, snapshot.scores.keys)
         assertEquals(7, snapshot.safeZones.size)
+
+        val selfLoop = snapshot.segments.getValue("3000000000_3000000000_0")
+        assertEquals(3, selfLoop.geometry.coordinates.size)
+        assertEquals(selfLoop.geometry.coordinates.first(), selfLoop.geometry.coordinates.last())
+        val selfLoopEdges = snapshot.routeGraph.graph.getAllEdges(3_000_000_000L, 3_000_000_000L)
+        assertEquals(1, selfLoopEdges.size)
+        assertEquals(
+            "3000000000_3000000000_0",
+            snapshot.routeGraph.edgeToSegmentId.getValue(selfLoopEdges.single()),
+        )
+        assertTrue(output.out.contains("selfLoops=1"))
+        assertTrue(!output.out.contains("3000000000_3000000000_0"))
     }
 
     @Test

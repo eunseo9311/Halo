@@ -8,7 +8,7 @@ import com.safesoundla.halo.infrastructure.aidata.AiDataStore
 import com.safesoundla.halo.infrastructure.aidata.RouteGraph
 import com.safesoundla.halo.infrastructure.aidata.model.*
 import org.jgrapht.graph.DefaultWeightedEdge
-import org.jgrapht.graph.DirectedWeightedMultigraph
+import org.jgrapht.graph.DirectedWeightedPseudograph
 import org.junit.jupiter.api.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFailsWith
@@ -74,7 +74,7 @@ class SafeZoneServiceTest {
                 scores = emptyMap(),
                 safeZones = zones,
                 routeGraph = RouteGraph(
-                    DirectedWeightedMultigraph<Long, DefaultWeightedEdge>(
+                    DirectedWeightedPseudograph<Long, DefaultWeightedEdge>(
                         DefaultWeightedEdge::class.java,
                     ),
                     emptyMap(),

@@ -96,7 +96,7 @@ class HighIncidentFilterTest {
     }
 
     private fun emptyRouteGraph() = RouteGraph(
-        org.jgrapht.graph.DirectedWeightedMultigraph<Long, DefaultWeightedEdge>(
+        org.jgrapht.graph.DirectedWeightedPseudograph<Long, DefaultWeightedEdge>(
             DefaultWeightedEdge::class.java,
         ),
         emptyMap(),

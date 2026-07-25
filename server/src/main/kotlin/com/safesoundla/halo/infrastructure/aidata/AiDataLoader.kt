@@ -10,7 +10,7 @@ import com.safesoundla.halo.infrastructure.aidata.model.SegmentFeature
 import com.safesoundla.halo.infrastructure.aidata.model.SegmentsGeoJson
 import com.safesoundla.halo.infrastructure.aidata.model.WsiScoresFile
 import org.jgrapht.graph.DefaultWeightedEdge
-import org.jgrapht.graph.DirectedWeightedMultigraph
+import org.jgrapht.graph.DirectedWeightedPseudograph
 import org.slf4j.LoggerFactory
 import org.springframework.boot.context.event.ApplicationReadyEvent
 import org.springframework.context.event.EventListener
@@ -231,9 +231,6 @@ class AiDataLoader(
         require(segment.properties.connects.size == 2) {
             "Segment '${segment.properties.segmentId}' connects must contain exactly two node IDs"
         }
-        require(segment.properties.connects[0] != segment.properties.connects[1]) {
-            "Segment '${segment.properties.segmentId}' connects must reference distinct node IDs"
-        }
         require(segment.properties.lengthM.isFinite() && segment.properties.lengthM > 0.0) {
             "Segment '${segment.properties.segmentId}' length_m must be positive and finite"
         }
@@ -321,18 +318,25 @@ class AiDataLoader(
      * - [RouteGraph.edgeToSegmentId] enables dynamic per-slot WSI cost at query time.
      * - [RouteGraph.nodeCoords] stores (lat, lng) for the A* Euclidean heuristic.
      *
-     * Uses [DirectedWeightedMultigraph] to support parallel directed segments between two nodes
+     * Uses [DirectedWeightedPseudograph] to support parallel directed segments and self-loops
      * (e.g. segment_id "111_222_0" and "111_222_1").
+     *
+     * TODO(Yen): Candidate-route generation must exclude repeated vertices and self-loop
+     * traversals so every future Yen candidate remains loopless.
      */
     private fun buildRouteGraph(segments: Map<String, SegmentFeature>): RouteGraph {
-        val graph = DirectedWeightedMultigraph<Long, DefaultWeightedEdge>(DefaultWeightedEdge::class.java)
+        val graph = DirectedWeightedPseudograph<Long, DefaultWeightedEdge>(DefaultWeightedEdge::class.java)
         val edgeToSegmentId = HashMap<DefaultWeightedEdge, String>(segments.size)
         val nodeCoords = HashMap<Long, DoubleArray>(segments.size * 2)
+        var selfLoopCount = 0
 
         for (segment in segments.values) {
             val props = segment.properties
             val nodeA = props.connects[0]
             val nodeB = props.connects[1]
+            if (nodeA == nodeB) {
+                selfLoopCount++
+            }
 
             graph.addVertex(nodeA)
             graph.addVertex(nodeB)
@@ -352,7 +356,7 @@ class AiDataLoader(
             "Route graph edge count does not match segment mapping count"
         }
         log.info("[AI-DATA] Route graph: vertices=${graph.vertexSet().size}, " +
-            "edges=${graph.edgeSet().size}")
+            "edges=${graph.edgeSet().size}, selfLoops=$selfLoopCount")
         return RouteGraph(graph, edgeToSegmentId, nodeCoords)
     }
 

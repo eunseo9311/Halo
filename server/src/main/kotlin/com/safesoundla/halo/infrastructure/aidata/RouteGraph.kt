@@ -1,7 +1,7 @@
 package com.safesoundla.halo.infrastructure.aidata
 
 import org.jgrapht.graph.DefaultWeightedEdge
-import org.jgrapht.graph.DirectedWeightedMultigraph
+import org.jgrapht.graph.DirectedWeightedPseudograph
 
 /**
  * Pre-built routing graph derived from segments.geojson at snapshot load time.
@@ -15,7 +15,7 @@ import org.jgrapht.graph.DirectedWeightedMultigraph
  * the rest of [AiDataSnapshot] on each data reload.
  */
 class RouteGraph(
-    val graph: DirectedWeightedMultigraph<Long, DefaultWeightedEdge>,
+    val graph: DirectedWeightedPseudograph<Long, DefaultWeightedEdge>,
     /** edge → segment_id for all edges in [graph]. */
     val edgeToSegmentId: Map<DefaultWeightedEdge, String>,
     /** node_id → [lat, lng] in degrees. */

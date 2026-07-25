@@ -7,7 +7,7 @@ import com.safesoundla.halo.infrastructure.aidata.RouteGraph
 import com.safesoundla.halo.infrastructure.aidata.model.*
 import com.safesoundla.halo.infrastructure.config.RoutingProperties
 import org.jgrapht.graph.DefaultWeightedEdge
-import org.jgrapht.graph.DirectedWeightedMultigraph
+import org.jgrapht.graph.DirectedWeightedPseudograph
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.assertThrows
@@ -54,7 +54,7 @@ class RouteHighIncidentFilterTest {
 
     @BeforeEach
     fun setUp() {
-        val graph = DirectedWeightedMultigraph<Long, DefaultWeightedEdge>(DefaultWeightedEdge::class.java)
+        val graph = DirectedWeightedPseudograph<Long, DefaultWeightedEdge>(DefaultWeightedEdge::class.java)
         val edgeToSegId = HashMap<DefaultWeightedEdge, String>()
         val nodeCoords = HashMap<Long, DoubleArray>()
 

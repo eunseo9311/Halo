@@ -36,6 +36,18 @@
         "subarea_id": "DUMMY",
         "street_name": ["East 1st Street", "South Main Street"]
       }
+    },
+    {
+      "type": "Feature",
+      "geometry": {"type": "LineString", "coordinates": [[-118.2415, 34.0541], [-118.2411, 34.0545], [-118.2415, 34.0541]]},
+      "properties": {
+        "segment_id": "3000000000_3000000000_0",
+        "connects": [3000000000, 3000000000],
+        "length_m": 71.3,
+        "district_id": "DUMMY",
+        "subarea_id": "DUMMY",
+        "street_name": "Loop Plaza"
+      }
     }
   ]
 }
