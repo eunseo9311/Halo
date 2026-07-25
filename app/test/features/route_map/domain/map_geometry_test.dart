@@ -35,6 +35,7 @@ void main() {
       (index) => RouteOverlay(
         id: '$index',
         colorValue: 0xFF000000 + index,
+        zIndex: index,
         points: [
           MapCoordinate(34 + index / 1000, -118),
           MapCoordinate(34 + index / 1000, -117.999),
@@ -54,6 +55,26 @@ void main() {
       'route-1',
       'route-2',
     ]);
+    expect(geometry.polylines.skip(200).map((line) => line.zIndex), [0, 1, 2]);
+  });
+
+  test('preserves route endpoint markers', () {
+    const markers = [
+      MapMarker(
+        id: 'origin',
+        position: MapCoordinate(34.0224, -118.2851),
+        kind: MapMarkerKind.origin,
+      ),
+      MapMarker(
+        id: 'destination',
+        position: MapCoordinate(34.0250, -118.2840),
+        kind: MapMarkerKind.destination,
+      ),
+    ];
+
+    final geometry = builder.build(segments: const [], markers: markers);
+
+    expect(geometry.markers, markers);
   });
 }
 

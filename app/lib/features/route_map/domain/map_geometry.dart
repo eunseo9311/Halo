@@ -18,12 +18,14 @@ class RouteOverlay {
     required this.points,
     required this.colorValue,
     this.strokeWidth = 5,
+    this.zIndex = 0,
   });
 
   final String id;
   final List<MapCoordinate> points;
   final int colorValue;
   final double strokeWidth;
+  final int zIndex;
 }
 
 class MapPolyline {
@@ -32,18 +34,35 @@ class MapPolyline {
     required this.points,
     required this.colorValue,
     required this.strokeWidth,
+    this.zIndex = 0,
   });
 
   final String id;
   final List<MapCoordinate> points;
   final int colorValue;
   final double strokeWidth;
+  final int zIndex;
+}
+
+enum MapMarkerKind { origin, destination }
+
+class MapMarker {
+  const MapMarker({
+    required this.id,
+    required this.position,
+    required this.kind,
+  });
+
+  final String id;
+  final MapCoordinate position;
+  final MapMarkerKind kind;
 }
 
 class MapGeometry {
-  const MapGeometry({required this.polylines});
+  const MapGeometry({required this.polylines, this.markers = const []});
 
   final List<MapPolyline> polylines;
+  final List<MapMarker> markers;
 }
 
 class MapGeometryBuilder {
@@ -52,6 +71,7 @@ class MapGeometryBuilder {
   MapGeometry build({
     required Iterable<SegmentScore> segments,
     Iterable<RouteOverlay> routes = const [],
+    Iterable<MapMarker> markers = const [],
   }) {
     final polylines = <MapPolyline>[
       for (final segment in segments)
@@ -70,10 +90,14 @@ class MapGeometryBuilder {
           points: route.points,
           colorValue: route.colorValue,
           strokeWidth: route.strokeWidth,
+          zIndex: route.zIndex,
         ),
     ];
 
-    return MapGeometry(polylines: List.unmodifiable(polylines));
+    return MapGeometry(
+      polylines: List.unmodifiable(polylines),
+      markers: List.unmodifiable(markers),
+    );
   }
 }
 

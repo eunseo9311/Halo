@@ -2,8 +2,10 @@ import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:halo/core/config/halo_map_config.dart';
 import 'package:halo/features/home/presentation/home_screen.dart';
+import 'package:halo/features/navigation/presentation/demo_navigation_screen.dart';
 import 'package:halo/features/search/data/recent_search_store.dart';
 import 'package:halo/features/search/domain/recent_search.dart';
+import 'package:halo/features/search/domain/route_candidate.dart';
 import 'package:halo/features/search/presentation/route_selection_placeholder_screen.dart';
 import 'package:halo/features/search/presentation/search_screen.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -13,8 +15,12 @@ Future<SharedPreferences>? _sharedPreferencesFuture;
 Future<SharedPreferences> _loadSharedPreferences() =>
     _sharedPreferencesFuture ??= SharedPreferences.getInstance();
 
+const _debugInitialLocation = bool.fromEnvironment('dart.vm.product')
+    ? '/'
+    : String.fromEnvironment('HALO_INITIAL_ROUTE', defaultValue: '/');
+
 final appRouter = GoRouter(
-  initialLocation: '/',
+  initialLocation: _debugInitialLocation,
   routes: [
     GoRoute(
       path: '/',
@@ -73,9 +79,30 @@ final appRouter = GoRouter(
       builder: (context, state) {
         final destination = switch (state.extra) {
           final RecentSearch search => search,
+          _ when haloMapDemo => demoRecentSearches.first,
           _ => const RecentSearch(title: 'Destination', address: ''),
         };
-        return RouteSelectionPlaceholderScreen(destination: destination);
+        return RouteSelectionPlaceholderScreen(
+          destination: destination,
+          onBack: () =>
+              context.canPop() ? context.pop() : context.go('/search'),
+          onStartNavigation: (route) =>
+              context.push('/navigation', extra: route),
+        );
+      },
+    ),
+    GoRoute(
+      path: '/navigation',
+      builder: (context, state) {
+        final route = switch (state.extra) {
+          final RouteCandidate candidate => candidate,
+          _ => mockEnvironmentRoutes.first,
+        };
+        return DemoNavigationScreen(
+          route: route,
+          onEnd: () =>
+              context.canPop() ? context.pop() : context.go('/route-selection'),
+        );
       },
     ),
     // Future routes:

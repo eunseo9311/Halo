@@ -135,7 +135,37 @@ class _PlatformRouteMapState extends State<PlatformRouteMap> {
             ],
             color: Color(line.colorValue),
             width: line.strokeWidth.round(),
+            zIndex: line.zIndex,
           ),
+      },
+      markers: {
+        for (final marker in widget.geometry.markers)
+          if (marker.kind == MapMarkerKind.destination)
+            Marker(
+              markerId: MarkerId(marker.id),
+              position: LatLng(
+                marker.position.latitude,
+                marker.position.longitude,
+              ),
+              icon: BitmapDescriptor.defaultMarkerWithHue(
+                BitmapDescriptor.hueRose,
+              ),
+            ),
+      },
+      circles: {
+        for (final marker in widget.geometry.markers)
+          if (marker.kind == MapMarkerKind.origin)
+            Circle(
+              circleId: CircleId(marker.id),
+              center: LatLng(
+                marker.position.latitude,
+                marker.position.longitude,
+              ),
+              radius: 5,
+              fillColor: const Color(0xFF3F91DF),
+              strokeColor: const Color(0xFFFFFFFF),
+              strokeWidth: 3,
+            ),
       },
       onTap: (point) =>
           widget.onMapTap?.call(MapCoordinate(point.latitude, point.longitude)),

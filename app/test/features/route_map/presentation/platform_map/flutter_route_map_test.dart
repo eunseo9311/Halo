@@ -108,6 +108,43 @@ void main() {
     controller.dispose();
   });
 
+  testWidgets('renders route origin and destination markers', (tester) async {
+    await tester.pumpWidget(
+      MaterialApp(
+        home: FlutterRouteMap(
+          center: initialCenter,
+          geometry: const MapGeometry(
+            polylines: [],
+            markers: [
+              MapMarker(
+                id: 'origin',
+                position: initialCenter,
+                kind: MapMarkerKind.origin,
+              ),
+              MapMarker(
+                id: 'destination',
+                position: MapCoordinate(34.053, -118.242),
+                kind: MapMarkerKind.destination,
+              ),
+            ],
+          ),
+          showUserLocation: false,
+          recenterGeneration: 0,
+          tileProvider: _TransparentTileProvider(),
+        ),
+      ),
+    );
+    await tester.pump();
+
+    final markerLayer = tester.widget<MarkerLayer>(find.byType(MarkerLayer));
+    expect(markerLayer.markers, hasLength(2));
+    expect(
+      markerLayer.markers.singleWhere((marker) => marker.width == 38).alignment,
+      Alignment.bottomCenter,
+    );
+    expect(find.byIcon(Icons.location_on), findsOneWidget);
+  });
+
   test('pending recenter keeps only the latest center', () {
     final pending = PendingMapCenter()
       ..schedule(initialCenter)

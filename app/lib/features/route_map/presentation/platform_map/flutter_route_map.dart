@@ -136,24 +136,53 @@ class _FlutterRouteMapState extends State<FlutterRouteMap> {
             ),
         ],
       ),
-      if (widget.showUserLocation)
+      if (widget.showUserLocation || widget.geometry.markers.isNotEmpty)
         MarkerLayer(
           markers: [
-            Marker(
-              point: LatLng(widget.center.latitude, widget.center.longitude),
-              width: 20,
-              height: 20,
-              child: Container(
-                decoration: BoxDecoration(
-                  color: Colors.blue,
-                  shape: BoxShape.circle,
-                  border: Border.all(color: Colors.white, width: 3),
-                  boxShadow: const [
-                    BoxShadow(color: Colors.black26, blurRadius: 4),
-                  ],
+            for (final marker in widget.geometry.markers)
+              Marker(
+                point: LatLng(
+                  marker.position.latitude,
+                  marker.position.longitude,
+                ),
+                width: marker.kind == MapMarkerKind.destination ? 38 : 24,
+                height: marker.kind == MapMarkerKind.destination ? 44 : 24,
+                alignment: marker.kind == MapMarkerKind.destination
+                    ? Alignment.bottomCenter
+                    : Alignment.center,
+                child: marker.kind == MapMarkerKind.destination
+                    ? const Icon(
+                        Icons.location_on,
+                        size: 38,
+                        color: Color(0xFF542323),
+                      )
+                    : Container(
+                        decoration: BoxDecoration(
+                          color: const Color(0xFF3F91DF),
+                          shape: BoxShape.circle,
+                          border: Border.all(color: Colors.white, width: 3),
+                          boxShadow: const [
+                            BoxShadow(color: Colors.black26, blurRadius: 4),
+                          ],
+                        ),
+                      ),
+              ),
+            if (widget.showUserLocation)
+              Marker(
+                point: LatLng(widget.center.latitude, widget.center.longitude),
+                width: 20,
+                height: 20,
+                child: Container(
+                  decoration: BoxDecoration(
+                    color: Colors.blue,
+                    shape: BoxShape.circle,
+                    border: Border.all(color: Colors.white, width: 3),
+                    boxShadow: const [
+                      BoxShadow(color: Colors.black26, blurRadius: 4),
+                    ],
+                  ),
                 ),
               ),
-            ),
           ],
         ),
       const RichAttributionWidget(
