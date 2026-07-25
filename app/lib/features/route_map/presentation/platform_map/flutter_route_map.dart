@@ -13,6 +13,7 @@ class FlutterRouteMap extends StatefulWidget {
     required this.showUserLocation,
     required this.recenterGeneration,
     this.onMapTap,
+    this.onMarkerTap,
     this.onCameraMove,
     this.onCameraIdle,
     this.mapController,
@@ -26,6 +27,7 @@ class FlutterRouteMap extends StatefulWidget {
   final bool showUserLocation;
   final int recenterGeneration;
   final MapTapCallback? onMapTap;
+  final MapMarkerTapCallback? onMarkerTap;
   final MapCameraCallback? onCameraMove;
   final MapCameraCallback? onCameraIdle;
   final MapController? mapController;
@@ -145,8 +147,8 @@ class _FlutterRouteMapState extends State<FlutterRouteMap> {
                   marker.position.latitude,
                   marker.position.longitude,
                 ),
-                width: marker.kind == MapMarkerKind.destination ? 38 : 24,
-                height: marker.kind == MapMarkerKind.destination ? 44 : 24,
+                width: marker.kind == MapMarkerKind.destination ? 38 : 40,
+                height: marker.kind == MapMarkerKind.destination ? 44 : 40,
                 alignment: marker.kind == MapMarkerKind.destination
                     ? Alignment.bottomCenter
                     : Alignment.center,
@@ -155,6 +157,30 @@ class _FlutterRouteMapState extends State<FlutterRouteMap> {
                         Icons.location_on,
                         size: 38,
                         color: Color(0xFF542323),
+                      )
+                    : marker.kind == MapMarkerKind.incident
+                    ? GestureDetector(
+                        key: Key('incident-marker-${marker.id}'),
+                        onTap: () => widget.onMarkerTap?.call(marker),
+                        child: DecoratedBox(
+                          decoration: BoxDecoration(
+                            color: Colors.white,
+                            shape: BoxShape.circle,
+                            border: Border.all(
+                              color: const Color(0xFFD93025),
+                              width: 2,
+                            ),
+                            boxShadow: const [
+                              BoxShadow(color: Colors.black26, blurRadius: 4),
+                            ],
+                          ),
+                          child: Center(
+                            child: Text(
+                              marker.label ?? '!',
+                              style: const TextStyle(fontSize: 21),
+                            ),
+                          ),
+                        ),
                       )
                     : Container(
                         decoration: BoxDecoration(

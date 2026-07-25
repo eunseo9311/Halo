@@ -10,6 +10,7 @@ class PlatformRouteMap extends StatelessWidget {
     required this.showUserLocation,
     required this.recenterGeneration,
     this.onMapTap,
+    this.onMarkerTap,
     this.onCameraMove,
     this.onCameraIdle,
     this.northResetGeneration = 0,
@@ -21,6 +22,7 @@ class PlatformRouteMap extends StatelessWidget {
   final bool showUserLocation;
   final int recenterGeneration;
   final MapTapCallback? onMapTap;
+  final MapMarkerTapCallback? onMarkerTap;
   final MapCameraCallback? onCameraMove;
   final MapCameraCallback? onCameraIdle;
   final int northResetGeneration;
@@ -32,6 +34,7 @@ class PlatformRouteMap extends StatelessWidget {
     showUserLocation: showUserLocation,
     recenterGeneration: recenterGeneration,
     onMapTap: onMapTap,
+    onMarkerTap: onMarkerTap,
     onCameraMove: onCameraMove,
     onCameraIdle: onCameraIdle,
     northResetGeneration: northResetGeneration,

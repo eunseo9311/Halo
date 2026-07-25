@@ -44,18 +44,20 @@ class MapPolyline {
   final int zIndex;
 }
 
-enum MapMarkerKind { origin, destination }
+enum MapMarkerKind { origin, destination, incident }
 
 class MapMarker {
   const MapMarker({
     required this.id,
     required this.position,
     required this.kind,
+    this.label,
   });
 
   final String id;
   final MapCoordinate position;
   final MapMarkerKind kind;
+  final String? label;
 }
 
 class MapGeometry {

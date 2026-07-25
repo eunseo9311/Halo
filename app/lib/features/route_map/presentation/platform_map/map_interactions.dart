@@ -8,6 +8,7 @@ class MapCameraView {
 }
 
 typedef MapTapCallback = void Function(MapCoordinate coordinate);
+typedef MapMarkerTapCallback = void Function(MapMarker marker);
 typedef MapCameraCallback = void Function(MapCameraView camera);
 
 /// Retains only the newest recenter request until a map controller is ready.

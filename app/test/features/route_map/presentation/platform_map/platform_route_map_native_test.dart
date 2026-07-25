@@ -18,4 +18,18 @@ void main() {
     expect(position.bearing, 0);
     expect(position.tilt, 0);
   });
+
+  test('incident marker uses its emoji with a clear warning fallback', () {
+    expect(incidentMarkerEmoji('🚨'), '🚨');
+    expect(incidentMarkerEmoji('  ⚠️  '), '⚠️');
+    expect(incidentMarkerEmoji(''), '⚠️');
+    expect(incidentMarkerEmoji(null), '⚠️');
+  });
+
+  test('incident marker symbol classification is deterministic', () {
+    expect(incidentMarkerSymbol('🚨'), IncidentMarkerSymbol.emergency);
+    expect(incidentMarkerSymbol('⚠️'), IncidentMarkerSymbol.warning);
+    expect(incidentMarkerSymbol(''), IncidentMarkerSymbol.warning);
+    expect(incidentMarkerSymbol(null), IncidentMarkerSymbol.warning);
+  });
 }

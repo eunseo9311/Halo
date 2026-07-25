@@ -145,6 +145,40 @@ void main() {
     expect(find.byIcon(Icons.location_on), findsOneWidget);
   });
 
+  testWidgets('incident marker forwards its domain-neutral marker callback', (
+    tester,
+  ) async {
+    MapMarker? tappedMarker;
+    await tester.pumpWidget(
+      MaterialApp(
+        home: FlutterRouteMap(
+          center: initialCenter,
+          geometry: const MapGeometry(
+            polylines: [],
+            markers: [
+              MapMarker(
+                id: 'incident-1',
+                position: initialCenter,
+                kind: MapMarkerKind.incident,
+                label: '🚨',
+              ),
+            ],
+          ),
+          showUserLocation: false,
+          recenterGeneration: 0,
+          tileProvider: _TransparentTileProvider(),
+          onMarkerTap: (marker) => tappedMarker = marker,
+        ),
+      ),
+    );
+    await tester.pump();
+
+    await tester.tap(find.byKey(const Key('incident-marker-incident-1')));
+
+    expect(tappedMarker?.id, 'incident-1');
+    expect(tappedMarker?.kind, MapMarkerKind.incident);
+  });
+
   test('pending recenter keeps only the latest center', () {
     final pending = PendingMapCenter()
       ..schedule(initialCenter)
