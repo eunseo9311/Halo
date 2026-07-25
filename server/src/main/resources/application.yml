@@ -43,6 +43,9 @@ halo:
     segments-path: ${HALO_AI_DATA_SEGMENTS_PATH:classpath:ai-data/segments.geojson}
     wsi-scores-path: ${HALO_AI_DATA_WSI_SCORES_PATH:classpath:ai-data/wsi_scores.json}
     safezones-path: ${HALO_AI_DATA_SAFEZONES_PATH:classpath:ai-data/safezones.geojson}
+  incidents:
+    # Optional external LAPD-style incident array. Blank keeps the in-memory store empty.
+    path: ${HALO_AI_DATA_INCIDENTS_PATH:}
 
 # ══ DB disabled — active when "db" profile is NOT present (the default) ═════
 ---
