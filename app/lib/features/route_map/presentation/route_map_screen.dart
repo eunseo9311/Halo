@@ -23,14 +23,15 @@ class MapLocationState {
 
 final _demoData = buildDemoMapData();
 
-final mapLocationProvider = FutureProvider<MapLocationState>((ref) async {
-  if (haloMapDemo) {
-    return const MapLocationState(
-      center: defaultMapCenter,
-      hasLocationFix: false,
-    );
-  }
+final mapLocationLoaderProvider = Provider<Future<MapLocationState> Function()>(
+  (ref) => _loadMapLocation,
+);
 
+final mapLocationProvider = FutureProvider<MapLocationState>(
+  (ref) => ref.watch(mapLocationLoaderProvider)(),
+);
+
+Future<MapLocationState> _loadMapLocation() async {
   try {
     final serviceEnabled = await Geolocator.isLocationServiceEnabled();
     if (!serviceEnabled) {
@@ -71,7 +72,7 @@ final mapLocationProvider = FutureProvider<MapLocationState>((ref) async {
       hasLocationFix: false,
     );
   }
-});
+}
 
 final segmentRepositoryProvider = Provider<SegmentRepository>(
   (ref) => SegmentRepository(),
