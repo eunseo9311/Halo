@@ -2,7 +2,10 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:halo/features/home/presentation/home_screen.dart';
+import 'package:halo/features/incidents/domain/incident.dart';
+import 'package:halo/features/incidents/presentation/incident_providers.dart';
 import 'package:halo/features/route_map/domain/map_geometry.dart';
+import 'package:halo/features/route_map/presentation/platform_map/map_interactions.dart';
 import 'package:halo/features/route_map/presentation/route_map_screen.dart';
 import 'package:latlong2/latlong.dart';
 
@@ -18,16 +21,33 @@ void main() {
     VoidCallback? onSearch,
     VoidCallback? onDirections,
     SosLauncher? launcher,
+    Future<List<Incident>>? incidents,
+    Future<List<DisplayedIncident>>? displayedIncidents,
+    bool incidentFailure = false,
   }) => ProviderScope(
-    overrides: [mapLocationProvider.overrideWith((ref) async => location)],
+    overrides: [
+      mapLocationProvider.overrideWith((ref) async => location),
+      nearbyIncidentsProvider.overrideWith((ref) async {
+        try {
+          if (incidentFailure) throw StateError('offline');
+          return await (incidents ?? Future.value(const []));
+        } catch (_) {
+          return const [];
+        }
+      }),
+      if (displayedIncidents != null)
+        displayedIncidentsProvider.overrideWith((ref) => displayedIncidents),
+    ],
     child: MaterialApp(
       home: HomeScreen(
         mapBuilder:
             mapBuilder ??
             ({
               required MapCoordinate center,
+              required MapGeometry geometry,
               required bool showUserLocation,
               required int northResetGeneration,
+              required void Function(MapMarker) onMarkerTap,
             }) => const ColoredBox(color: Colors.grey),
         onSearch: onSearch,
         onDirections: onDirections,
@@ -96,8 +116,10 @@ void main() {
         mapBuilder:
             ({
               required MapCoordinate center,
+              required MapGeometry geometry,
               required bool showUserLocation,
               required int northResetGeneration,
+              required void Function(MapMarker) onMarkerTap,
             }) {
               resetGenerations.add(northResetGeneration);
               return const SizedBox.expand();
@@ -196,8 +218,10 @@ void main() {
         mapBuilder:
             ({
               required MapCoordinate center,
+              required MapGeometry geometry,
               required bool showUserLocation,
               required int northResetGeneration,
+              required void Function(MapMarker) onMarkerTap,
             }) {
               puckEnabled = showUserLocation;
               return const SizedBox.expand();
@@ -226,8 +250,10 @@ void main() {
         mapBuilder:
             ({
               required MapCoordinate center,
+              required MapGeometry geometry,
               required bool showUserLocation,
               required int northResetGeneration,
+              required void Function(MapMarker) onMarkerTap,
             }) {
               puckEnabled = showUserLocation;
               return const SizedBox.expand();
@@ -260,4 +286,143 @@ void main() {
       expect(size.height, greaterThanOrEqualTo(48));
     }
   });
+
+  testWidgets('incident marker opens a privacy-safe detail sheet', (
+    tester,
+  ) async {
+    MapMarkerTapCallback? markerTap;
+    await tester.pumpWidget(
+      buildHome(
+        incidents: Future.value([_incident]),
+        mapBuilder:
+            ({
+              required MapCoordinate center,
+              required MapGeometry geometry,
+              required bool showUserLocation,
+              required int northResetGeneration,
+              required MapMarkerTapCallback onMarkerTap,
+            }) {
+              markerTap = onMarkerTap;
+              if (geometry.markers.isNotEmpty) {
+                expect(
+                  geometry.markers
+                      .where((marker) => marker.id == 'incident-1')
+                      .single
+                      .label,
+                  '🚨',
+                );
+              }
+              return const SizedBox.expand();
+            },
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    markerTap!(
+      const MapMarker(
+        id: 'incident-1',
+        position: MapCoordinate(34.02, -118.28),
+        kind: MapMarkerKind.incident,
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    expect(find.byKey(const Key('incident-detail-sheet')), findsOneWidget);
+    expect(find.text('🚨  Sidewalk hazard'), findsOneWidget);
+    expect(find.text('Temporary obstruction reported nearby.'), findsOneWidget);
+    expect(find.textContaining('Public space · South LA'), findsOneWidget);
+    expect(find.textContaining('raw private factor'), findsNothing);
+    expect(find.textContaining('34.02'), findsNothing);
+    expect(find.textContaining('-118.28'), findsNothing);
+    expect(find.text('Sample data'), findsNothing);
+  });
+
+  testWidgets('demo incident detail shows a subtle sample caption', (
+    tester,
+  ) async {
+    MapMarkerTapCallback? markerTap;
+    final display = DisplayedIncident(
+      markerId: 'incident-1-demo-0',
+      incident: _incident,
+      latitude: 34.0546,
+      longitude: -118.2465,
+      isDemoLocation: true,
+    );
+    await tester.pumpWidget(
+      buildHome(
+        displayedIncidents: Future.value([display]),
+        mapBuilder:
+            ({
+              required MapCoordinate center,
+              required MapGeometry geometry,
+              required bool showUserLocation,
+              required int northResetGeneration,
+              required MapMarkerTapCallback onMarkerTap,
+            }) {
+              markerTap = onMarkerTap;
+              return const SizedBox.expand();
+            },
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    markerTap!(
+      const MapMarker(
+        id: 'incident-1-demo-0',
+        position: MapCoordinate(34.0546, -118.2465),
+        kind: MapMarkerKind.incident,
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    expect(find.text('Sample data'), findsOneWidget);
+    final caption = tester.widget<Text>(find.text('Sample data'));
+    expect(caption.style?.color, const Color(0xFF6B7472));
+    expect(
+      find.text('Demo location — not the reported location'),
+      findsNothing,
+    );
+    expect(find.textContaining('34.0546'), findsNothing);
+  });
+
+  testWidgets('incident request failure leaves the home map usable', (
+    tester,
+  ) async {
+    MapGeometry? renderedGeometry;
+    await tester.pumpWidget(
+      buildHome(
+        incidentFailure: true,
+        mapBuilder:
+            ({
+              required MapCoordinate center,
+              required MapGeometry geometry,
+              required bool showUserLocation,
+              required int northResetGeneration,
+              required MapMarkerTapCallback onMarkerTap,
+            }) {
+              renderedGeometry = geometry;
+              return const SizedBox.expand();
+            },
+      ),
+    );
+    await tester.pump();
+    await tester.pump();
+
+    expect(renderedGeometry?.markers, isEmpty);
+    expect(find.byKey(const Key('home-search-button')), findsOneWidget);
+    expect(find.textContaining('offline'), findsNothing);
+  });
 }
+
+final _incident = Incident(
+  incidentId: 'incident-1',
+  category: 'robbery',
+  emoji: '🚨',
+  title: 'Sidewalk hazard',
+  description: 'Temporary obstruction reported nearby.',
+  locationType: 'Public space',
+  areaName: 'South LA',
+  occurredAt: DateTime(2026, 7, 26, 10, 30),
+  latitude: 34.02,
+  longitude: -118.28,
+);

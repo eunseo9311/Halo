@@ -2,6 +2,7 @@ import 'dart:async';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:halo/features/incidents/presentation/incident_providers.dart';
 import 'package:halo/features/route_map/domain/map_geometry.dart';
 import 'package:halo/features/route_map/presentation/platform_map/platform_route_map.dart';
 import 'package:halo/features/route_map/presentation/route_map_screen.dart';
@@ -10,8 +11,10 @@ import 'package:url_launcher/url_launcher.dart';
 typedef HomeMapBuilder =
     Widget Function({
       required MapCoordinate center,
+      required MapGeometry geometry,
       required bool showUserLocation,
       required int northResetGeneration,
+      required MapMarkerTapCallback onMarkerTap,
     });
 typedef SosLauncher = Future<bool> Function(Uri uri);
 
@@ -39,9 +42,23 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
   @override
   Widget build(BuildContext context) {
     final locationAsync = ref.watch(mapLocationProvider);
+    final incidentsAsync = ref.watch(displayedIncidentsProvider);
+    final incidents = incidentsAsync.valueOrNull ?? const <DisplayedIncident>[];
     final location = locationAsync.valueOrNull;
     final center = location?.center ?? defaultMapCenter;
     final mapBuilder = widget.mapBuilder ?? _buildMap;
+    final geometry = MapGeometry(
+      polylines: const [],
+      markers: [
+        for (final incident in incidents)
+          MapMarker(
+            id: incident.markerId,
+            position: MapCoordinate(incident.latitude, incident.longitude),
+            kind: MapMarkerKind.incident,
+            label: incident.incident.emoji,
+          ),
+      ],
+    );
 
     return Scaffold(
       body: Stack(
@@ -49,8 +66,18 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
         children: [
           mapBuilder(
             center: MapCoordinate(center.latitude, center.longitude),
+            geometry: geometry,
             showUserLocation: location?.hasLocationFix ?? false,
             northResetGeneration: _northResetGeneration,
+            onMarkerTap: (marker) {
+              if (marker.kind != MapMarkerKind.incident) return;
+              for (final incident in incidents) {
+                if (incident.markerId == marker.id) {
+                  _showIncidentDetails(incident);
+                  return;
+                }
+              }
+            },
           ),
           SafeArea(
             minimum: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
@@ -114,19 +141,75 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
       ),
     );
   }
+
+  Future<void> _showIncidentDetails(DisplayedIncident incident) =>
+      showModalBottomSheet<void>(
+        context: context,
+        showDragHandle: true,
+        builder: (context) => _IncidentDetails(incident: incident),
+      );
 }
 
 Widget _buildMap({
   required MapCoordinate center,
+  required MapGeometry geometry,
   required bool showUserLocation,
   required int northResetGeneration,
+  required MapMarkerTapCallback onMarkerTap,
 }) => PlatformRouteMap(
   center: center,
-  geometry: const MapGeometry(polylines: []),
+  geometry: geometry,
   showUserLocation: showUserLocation,
   recenterGeneration: 0,
   northResetGeneration: northResetGeneration,
+  onMarkerTap: onMarkerTap,
 );
+
+class _IncidentDetails extends StatelessWidget {
+  const _IncidentDetails({required this.incident});
+
+  final DisplayedIncident incident;
+
+  @override
+  Widget build(BuildContext context) {
+    final report = incident.incident;
+    final localTime = report.occurredAt.toLocal();
+    final minute = localTime.minute.toString().padLeft(2, '0');
+    final dateTime =
+        '${localTime.month}/${localTime.day}/${localTime.year} '
+        '${localTime.hour}:$minute';
+
+    return SafeArea(
+      child: Padding(
+        padding: const EdgeInsets.fromLTRB(24, 4, 24, 24),
+        child: Column(
+          key: const Key('incident-detail-sheet'),
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              '${report.emoji}  ${report.title}',
+              style: Theme.of(context).textTheme.titleLarge,
+            ),
+            const SizedBox(height: 12),
+            Text(report.description),
+            const SizedBox(height: 16),
+            Text('When: $dateTime'),
+            const SizedBox(height: 6),
+            Text('Location: ${report.locationType} · ${report.areaName}'),
+            if (incident.isDemoLocation) ...[
+              const SizedBox(height: 10),
+              const Text(
+                'Sample data',
+                style: TextStyle(color: Color(0xFF6B7472), fontSize: 12),
+              ),
+            ],
+          ],
+        ),
+      ),
+    );
+  }
+}
 
 class _SearchBar extends StatelessWidget {
   const _SearchBar({required this.onTap});
