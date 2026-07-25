@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:halo/features/route_map/domain/map_geometry.dart';
 import 'package:halo/features/route_map/presentation/platform_map/platform_route_map.dart';
+import 'package:halo/features/search/data/demo_route_geometry.dart';
 import 'package:halo/features/search/domain/recent_search.dart';
 import 'package:halo/features/search/domain/route_candidate.dart';
 
@@ -28,12 +29,10 @@ class RouteSelectionPlaceholderScreen extends StatefulWidget {
 
 class _RouteSelectionPlaceholderScreenState
     extends State<RouteSelectionPlaceholderScreen> {
-  static const _origin = MapCoordinate(34.02240, -118.28510);
-  static const _destination = MapCoordinate(34.02515, -118.28405);
   // Google Maps centers against the full platform view, including the area
-  // covered by the bottom sheet. Shift the camera target south so the USC
+  // covered by the bottom sheet. Shift the camera target south so the Downtown
   // route remains centered in the visible map region above the sheet.
-  static const _mapCenter = MapCoordinate(34.00985, -118.28455);
+  static const _mapCenter = MapCoordinate(34.0499, -118.2439);
 
   var _preference = RoutePreference.environment;
   RouteCandidate _selected = mockEnvironmentRoutes.first;
@@ -130,9 +129,7 @@ class _RouteSelectionPlaceholderScreenState
   }
 
   Widget _buildDefaultMap(BuildContext context, RouteCandidate selectedRoute) {
-    final routes = _preference == RoutePreference.environment
-        ? mockEnvironmentRoutes
-        : mockShortestRoutes;
+    final routes = [...mockEnvironmentRoutes, ...mockShortestRoutes];
     final selectedLast = [
       ...routes.where((route) => route.id != selectedRoute.id),
       selectedRoute,
@@ -145,7 +142,7 @@ class _RouteSelectionPlaceholderScreenState
           for (final route in selectedLast)
             RouteOverlay(
               id: route.id,
-              points: _pointsForRoute(route.id),
+              points: demoRoutePointsFor(route.id),
               colorValue: _routeColor(
                 route,
                 selected: route.id == selectedRoute.id,
@@ -154,15 +151,15 @@ class _RouteSelectionPlaceholderScreenState
               zIndex: route.id == selectedRoute.id ? 1 : 0,
             ),
         ],
-        markers: const [
+        markers: [
           MapMarker(
             id: 'route-origin',
-            position: _origin,
+            position: demoRouteOrigin,
             kind: MapMarkerKind.origin,
           ),
           MapMarker(
             id: 'route-destination',
-            position: _destination,
+            position: demoRouteDestination,
             kind: MapMarkerKind.destination,
           ),
         ],
@@ -171,27 +168,6 @@ class _RouteSelectionPlaceholderScreenState
       recenterGeneration: 0,
     );
   }
-
-  static List<MapCoordinate> _pointsForRoute(String id) => switch (id) {
-    'balanced' => const [
-      _origin,
-      MapCoordinate(34.02305, -118.28510),
-      MapCoordinate(34.02410, -118.28490),
-      _destination,
-    ],
-    'shaded' => const [
-      _origin,
-      MapCoordinate(34.02325, -118.28430),
-      MapCoordinate(34.02445, -118.28380),
-      _destination,
-    ],
-    _ => const [
-      _origin,
-      MapCoordinate(34.02240, -118.28435),
-      MapCoordinate(34.02340, -118.28385),
-      _destination,
-    ],
-  };
 
   static int _routeColor(RouteCandidate route, {required bool selected}) {
     final color = switch (route.wsi) {

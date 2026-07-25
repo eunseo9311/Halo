@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:halo/features/navigation/presentation/demo_navigation_screen.dart';
 import 'package:halo/features/route_map/domain/map_geometry.dart';
+import 'package:halo/features/search/data/demo_route_geometry.dart';
 import 'package:halo/features/search/domain/route_candidate.dart';
 
 void main() {
@@ -73,6 +74,26 @@ void main() {
       MapMarkerKind.origin,
       MapMarkerKind.destination,
     ]);
+    expect(capturedGeometry!.polylines.first.points.first, demoRouteOrigin);
+    expect(capturedGeometry!.polylines.last.points.last, demoRouteDestination);
+    for (var index = 0; index < 2; index++) {
+      expect(
+        capturedGeometry!.polylines[index].points.last,
+        same(capturedGeometry!.polylines[index + 1].points.first),
+      );
+    }
+    final reconstructedPath = [
+      ...capturedGeometry!.polylines.first.points,
+      ...capturedGeometry!.polylines[1].points.skip(1),
+      ...capturedGeometry!.polylines.last.points.skip(1),
+    ];
+    expect(reconstructedPath, demoRoutePointsFor(route.id));
+    expect(
+      capturedGeometry!.polylines.every(
+        (line) => line.strokeWidth == wsiStrokeWidth,
+      ),
+      isTrue,
+    );
   });
 
   testWidgets(
@@ -114,16 +135,51 @@ void main() {
         balancedGeometry!.polylines.expand((line) => line.points),
         isNot(equals(shadedGeometry!.polylines.expand((line) => line.points))),
       );
-      expect(
-        shadedGeometry!.markers.first.position,
-        const MapCoordinate(34.0498, -118.2470),
-      );
-      expect(
-        shadedGeometry!.markers.last.position,
-        const MapCoordinate(34.0545, -118.2418),
-      );
+      expect(shadedGeometry!.markers.first.position, demoRouteOrigin);
+      expect(shadedGeometry!.markers.last.position, demoRouteDestination);
     },
   );
+
+  testWidgets('safest is green-dominant and fastest is red-dominant', (
+    tester,
+  ) async {
+    MapGeometry? thisGeometry;
+
+    Future<void> show(RouteCandidate route) async {
+      await tester.pumpWidget(
+        MaterialApp(
+          home: DemoNavigationScreen(
+            route: route,
+            onEnd: () {},
+            mapBuilder:
+                ({
+                  required center,
+                  required geometry,
+                  required recenterGeneration,
+                }) {
+                  thisGeometry = geometry;
+                  return const ColoredBox(color: Colors.white);
+                },
+          ),
+        ),
+      );
+    }
+
+    double share(int index) {
+      final lines = thisGeometry!.polylines;
+      final totalEdges = lines.fold<int>(
+        0,
+        (sum, line) => sum + line.points.length - 1,
+      );
+      return (lines[index].points.length - 1) / totalEdges;
+    }
+
+    await show(mockEnvironmentRoutes.first);
+    expect(share(0), closeTo(0.60, 0.02));
+
+    await show(mockShortestRoutes.single);
+    expect(share(2), closeTo(0.60, 0.02));
+  });
 
   testWidgets('recenter updates the map and End invokes its callback', (
     tester,

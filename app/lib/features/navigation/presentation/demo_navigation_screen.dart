@@ -1,9 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:halo/features/route_map/domain/map_geometry.dart';
 import 'package:halo/features/route_map/presentation/platform_map/platform_route_map.dart';
+import 'package:halo/features/search/data/demo_route_geometry.dart';
 import 'package:halo/features/search/domain/route_candidate.dart';
 
-const _routeCenter = MapCoordinate(34.0522, -118.2437);
+const _routeCenter = MapCoordinate(34.0499, -118.2439);
 
 typedef NavigationMapBuilder =
     Widget Function({
@@ -31,49 +32,36 @@ class DemoNavigationScreen extends StatefulWidget {
 class _DemoNavigationScreenState extends State<DemoNavigationScreen> {
   var _recenterGeneration = 0;
 
-  static List<MapCoordinate> _routePointsFor(String routeId) =>
-      switch (routeId) {
-        'shaded' => const [
-          MapCoordinate(34.0498, -118.2470),
-          MapCoordinate(34.0507, -118.2448),
-          MapCoordinate(34.0529, -118.2430),
-          MapCoordinate(34.0545, -118.2418),
-        ],
-        'quiet' || 'shortest' => const [
-          MapCoordinate(34.0498, -118.2470),
-          MapCoordinate(34.0515, -118.2461),
-          MapCoordinate(34.0537, -118.2440),
-          MapCoordinate(34.0545, -118.2418),
-        ],
-        _ => const [
-          MapCoordinate(34.0498, -118.2470),
-          MapCoordinate(34.0512, -118.2454),
-          MapCoordinate(34.0527, -118.2437),
-          MapCoordinate(34.0545, -118.2418),
-        ],
-      };
-
   static MapGeometry _geometryFor(RouteCandidate route) {
-    final routePoints = _routePointsFor(route.id);
+    final routePoints = demoRoutePointsFor(route.id);
+    final (greenShare, yellowShare) = switch (route.id) {
+      'balanced' => (0.60, 0.25),
+      'shortest' => (0.20, 0.20),
+      'shaded' => (0.45, 0.30),
+      _ => (0.30, 0.30),
+    };
+    final firstBoundary = ((routePoints.length - 1) * greenShare).round();
+    final secondBoundary =
+        ((routePoints.length - 1) * (greenShare + yellowShare)).round();
     return MapGeometry(
       polylines: [
         MapPolyline(
           id: 'navigation-green',
-          points: routePoints.sublist(0, 2),
+          points: routePoints.sublist(0, firstBoundary + 1),
           colorValue: greenWsiColor,
           strokeWidth: wsiStrokeWidth,
           zIndex: 1,
         ),
         MapPolyline(
           id: 'navigation-yellow',
-          points: routePoints.sublist(1, 3),
+          points: routePoints.sublist(firstBoundary, secondBoundary + 1),
           colorValue: yellowWsiColor,
           strokeWidth: wsiStrokeWidth,
           zIndex: 1,
         ),
         MapPolyline(
           id: 'navigation-red',
-          points: routePoints.sublist(2, 4),
+          points: routePoints.sublist(secondBoundary),
           colorValue: redWsiColor,
           strokeWidth: wsiStrokeWidth,
           zIndex: 1,

@@ -5,16 +5,19 @@ import 'package:halo/features/search/domain/recent_search.dart';
 typedef SearchSelectionCallback = void Function(RecentSearch search);
 
 const demoRecentSearches = [
-  RecentSearch(title: 'USC Village', address: '3301 S Hoover St, Los Angeles'),
   RecentSearch(
-    title: 'Cafe Dulce (USC Village)',
-    address: '3096 McClintock Ave, Los Angeles',
+    title: 'Union Station',
+    address: '800 N Alameda St, Los Angeles',
   ),
   RecentSearch(
-    title: 'Zumberge Hall of Science',
-    address: '3651 Trousdale Pkwy, Los Angeles',
+    title: 'Pershing Square',
+    address: '532 S Olive St, Los Angeles',
   ),
-  RecentSearch(title: 'Chipotle', address: '3748 S Figueroa St, Los Angeles'),
+  RecentSearch(
+    title: 'Grand Central Market',
+    address: '317 S Broadway, Los Angeles',
+  ),
+  RecentSearch(title: 'The Broad', address: '221 S Grand Ave, Los Angeles'),
 ];
 
 class SearchScreen extends StatefulWidget {

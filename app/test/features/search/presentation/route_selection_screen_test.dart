@@ -3,6 +3,8 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:halo/features/search/domain/recent_search.dart';
 import 'package:halo/features/search/domain/route_candidate.dart';
 import 'package:halo/features/search/presentation/route_selection_placeholder_screen.dart';
+import 'package:halo/features/route_map/presentation/platform_map/platform_route_map.dart';
+import 'package:halo/features/route_map/domain/map_geometry.dart';
 
 void main() {
   const destination = RecentSearch(
@@ -42,8 +44,8 @@ void main() {
     expect(find.byKey(const ValueKey('route-balanced')), findsOneWidget);
     expect(find.byKey(const ValueKey('route-shaded')), findsOneWidget);
     expect(find.byKey(const ValueKey('route-quiet')), findsOneWidget);
-    expect(find.text('Environment score 0.78'), findsOneWidget);
-    expect(find.textContaining('high_incident'), findsNothing);
+    expect(find.text('Environment score 0.82'), findsOneWidget);
+    expect(find.textContaining('raw private factor'), findsNothing);
     expect(find.textContaining('unknown'), findsNothing);
   });
 
@@ -60,8 +62,39 @@ void main() {
     expect(find.byKey(const ValueKey('route-balanced')), findsNothing);
     expect(find.byKey(const Key('selected-route-check')), findsOneWidget);
     expect(
-      find.text('Environment score 0.42 · No nearby safety facility'),
+      find.text('Environment score 0.30 · No nearby safety facility'),
       findsOneWidget,
+    );
+  });
+
+  testWidgets('selection map always draws all four detailed routes', (
+    tester,
+  ) async {
+    usePhoneViewport(tester);
+    await tester.pumpWidget(buildScreen());
+
+    MapGeometry geometry() =>
+        tester.widget<PlatformRouteMap>(find.byType(PlatformRouteMap)).geometry;
+
+    expect(geometry().polylines, hasLength(4));
+    expect(
+      geometry().polylines.every((line) => line.points.length > 50),
+      isTrue,
+    );
+    expect(geometry().polylines.last.id, 'route-balanced');
+    expect(geometry().polylines.last.zIndex, 1);
+
+    await tester.tap(find.byKey(const Key('shortest-distance-toggle')));
+    await tester.pump();
+
+    expect(geometry().polylines, hasLength(4));
+    expect(geometry().polylines.last.id, 'route-shortest');
+    expect(geometry().polylines.last.colorValue, redWsiColor);
+    expect(
+      geometry().polylines
+          .take(3)
+          .every((line) => (line.colorValue >> 24) == 0x59 && line.zIndex == 0),
+      isTrue,
     );
   });
 

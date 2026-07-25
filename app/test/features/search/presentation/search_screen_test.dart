@@ -40,10 +40,10 @@ void main() {
     await tester.pumpWidget(buildSearch(demoMode: true, store: store));
     await tester.pumpAndSettle();
 
-    expect(find.text('USC Village'), findsOneWidget);
-    expect(find.text('Cafe Dulce (USC Village)'), findsOneWidget);
-    expect(find.text('Zumberge Hall of Science'), findsOneWidget);
-    expect(find.text('Chipotle'), findsOneWidget);
+    expect(find.text('Union Station'), findsOneWidget);
+    expect(find.text('Pershing Square'), findsOneWidget);
+    expect(find.text('Grand Central Market'), findsOneWidget);
+    expect(find.text('The Broad'), findsOneWidget);
     expect(store.loadCount, 0);
     expect(store.saveCount, 0);
   });
@@ -125,7 +125,7 @@ void main() {
     for (final key in const [
       Key('search-back-button'),
       Key('search-microphone-button'),
-      ValueKey('recent-search-USC Village'),
+      ValueKey('recent-search-Union Station'),
     ]) {
       final size = tester.getSize(find.byKey(key));
       expect(size.width, greaterThanOrEqualTo(48));
